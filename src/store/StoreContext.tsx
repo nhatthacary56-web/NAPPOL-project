@@ -38,6 +38,17 @@ type StoreContextValue = {
   shop: Shop | null
   bootstrapping: boolean
   login: (email: string, password: string) => Promise<{ ok: boolean; message: string }>
+  loginWithPhone: (phone: string, code: string) => Promise<{ ok: boolean; message: string }>
+  requestPhoneOtp: (phone: string) => Promise<{ ok: boolean; message: string; demoCode?: string }>
+  loginWithGoogle: (payload?: {
+    credential?: string
+    demoEmail?: string
+    demoName?: string
+  }) => Promise<{ ok: boolean; message: string }>
+  loginWithLine: (payload?: {
+    accessToken?: string
+    demoName?: string
+  }) => Promise<{ ok: boolean; message: string }>
   register: (payload: {
     name: string
     email: string
@@ -342,6 +353,71 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [])
+
+  const applyAuthSession = useCallback(async (token: string, message: string) => {
+    setToken(token)
+    const me = await authApi.me()
+    setUser(me.user)
+    setShop(me.shop)
+    return { ok: true, message }
+  }, [])
+
+  const requestPhoneOtp = useCallback(async (phone: string) => {
+    try {
+      const res = await authApi.requestOtp(phone)
+      return { ok: true, message: res.message, demoCode: res.demoCode }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'ส่ง OTP ไม่สำเร็จ',
+      }
+    }
+  }, [])
+
+  const loginWithPhone = useCallback(
+    async (phone: string, code: string) => {
+      try {
+        const res = await authApi.verifyOtp(phone, code)
+        return applyAuthSession(res.token, res.message || 'เข้าสู่ระบบด้วยเบอร์สำเร็จ')
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : 'ยืนยัน OTP ไม่สำเร็จ',
+        }
+      }
+    },
+    [applyAuthSession],
+  )
+
+  const loginWithGoogle = useCallback(
+    async (payload?: { credential?: string; demoEmail?: string; demoName?: string }) => {
+      try {
+        const res = await authApi.googleLogin(payload || {})
+        return applyAuthSession(res.token, res.message || 'เข้าสู่ระบบด้วย Google สำเร็จ')
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : 'Google login ไม่สำเร็จ',
+        }
+      }
+    },
+    [applyAuthSession],
+  )
+
+  const loginWithLine = useCallback(
+    async (payload?: { accessToken?: string; demoName?: string }) => {
+      try {
+        const res = await authApi.lineLogin(payload || {})
+        return applyAuthSession(res.token, res.message || 'เข้าสู่ระบบด้วย LINE สำเร็จ')
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : 'LINE login ไม่สำเร็จ',
+        }
+      }
+    },
+    [applyAuthSession],
+  )
 
   const register = useCallback(
     async (payload: {
@@ -668,6 +744,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       shop,
       bootstrapping,
       login,
+      loginWithPhone,
+      requestPhoneOtp,
+      loginWithGoogle,
+      loginWithLine,
       register,
       logout,
       updateProfile,
@@ -724,6 +804,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       shop,
       bootstrapping,
       login,
+      loginWithPhone,
+      requestPhoneOtp,
+      loginWithGoogle,
+      loginWithLine,
       register,
       logout,
       updateProfile,

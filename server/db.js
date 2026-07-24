@@ -560,6 +560,7 @@ function migrate(data) {
   if (!Array.isArray(data.returns)) data.returns = []
   if (!Array.isArray(data.userVouchers)) data.userVouchers = []
   if (!Array.isArray(data.helpTickets)) data.helpTickets = []
+  if (!Array.isArray(data.otpCodes)) data.otpCodes = []
   if (!Array.isArray(data.banners) || data.banners.length === 0) {
     data.banners = emptyDb().banners
   }
@@ -627,6 +628,28 @@ export function publicUser(user) {
 
 export function findUserByEmail(email) {
   return db.users.find((u) => u.email.toLowerCase() === email.toLowerCase())
+}
+
+export function findUserByPhone(phone) {
+  const normalized = normalizePhone(phone)
+  if (!normalized) return null
+  return db.users.find((u) => normalizePhone(u.phone) === normalized)
+}
+
+export function findUserByGoogleId(googleId) {
+  return db.users.find((u) => u.googleId === googleId)
+}
+
+export function findUserByLineId(lineId) {
+  return db.users.find((u) => u.lineId === lineId)
+}
+
+export function normalizePhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.startsWith('66') && digits.length >= 11) return `0${digits.slice(2)}`
+  if (digits.length === 9 && digits.startsWith('8')) return `0${digits}`
+  return digits
 }
 
 export function findUserById(id) {

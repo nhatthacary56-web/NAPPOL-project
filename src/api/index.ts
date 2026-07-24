@@ -35,6 +35,41 @@ export const authApi = {
       method: 'POST',
       json: { email, password },
     }),
+  providers: () =>
+    api<{
+      ok: true
+      providers: {
+        phone: boolean
+        google: boolean
+        line: boolean
+        email: boolean
+        googleClientId: string | null
+        lineChannelId: string | null
+        lineRedirectUri: string | null
+        demoOtp: boolean
+        demoSocial: boolean
+      }
+    }>('/auth/providers'),
+  requestOtp: (phone: string) =>
+    api<{ ok: true; message: string; demoCode?: string; expiresInSec: number }>(
+      '/auth/otp/request',
+      { method: 'POST', json: { phone } },
+    ),
+  verifyOtp: (phone: string, code: string, name?: string) =>
+    api<{ ok: true; token: string; user: ApiUser; message?: string }>('/auth/otp/verify', {
+      method: 'POST',
+      json: { phone, code, name },
+    }),
+  googleLogin: (body: { credential?: string; demoEmail?: string; demoName?: string }) =>
+    api<{ ok: true; token: string; user: ApiUser; message?: string }>('/auth/oauth/google', {
+      method: 'POST',
+      json: body,
+    }),
+  lineLogin: (body: { accessToken?: string; demoName?: string }) =>
+    api<{ ok: true; token: string; user: ApiUser; message?: string }>('/auth/oauth/line', {
+      method: 'POST',
+      json: body,
+    }),
   me: () => api<{ ok: true; user: ApiUser; shop: Shop | null }>('/auth/me'),
   updateMe: (body: Partial<Pick<ApiUser, 'name' | 'phone'>>) =>
     api<{ ok: true; user: ApiUser }>('/auth/me', { method: 'PATCH', json: body }),
