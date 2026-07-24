@@ -604,6 +604,21 @@ export function persist() {
   save()
 }
 
+export async function flushPersist() {
+  saveLocal()
+  if (!isSupabaseConfigured()) return { ok: false, message: 'supabase not configured' }
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  try {
+    await saveAppState(db)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, message: err.message || String(err) }
+  }
+}
+
 export function publicUser(user) {
   if (!user) return null
   const { passwordHash, ...safe } = user

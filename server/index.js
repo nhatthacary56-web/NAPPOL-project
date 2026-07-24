@@ -3,8 +3,8 @@ import cors from 'cors'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
-import { initDb } from './db.js'
-import { getStorageStatus } from './supabase.js'
+import { flushPersist, getDb, initDb } from './db.js'
+import { getStorageStatus, probeSupabase } from './supabase.js'
 import authRoutes from './routes/auth.js'
 import productRoutes from './routes/products.js'
 import shopRoutes from './routes/shops.js'
@@ -48,9 +48,24 @@ app.get('/health', (_req, res) => {
     storage: storage.configured ? 'supabase' : 'local',
     supabaseConfigured: storage.configured,
     supabaseKeyKind: storage.keyKind,
+    supabaseUrlHost: storage.urlHost,
+    supabaseKeyPrefix: storage.keyPrefix,
     lastPersistAt: storage.lastPersistAt,
     lastPersistError: storage.lastPersistError,
   })
+})
+
+app.get('/api/storage-check', async (_req, res) => {
+  const flushed = await flushPersist()
+  const probed = flushed.ok
+    ? {
+        ok: true,
+        ...getStorageStatus(),
+        message: 'flush ok',
+        users: getDb().users?.length ?? 0,
+      }
+    : await probeSupabase(getDb())
+  res.status(probed.ok ? 200 : 500).json(probed)
 })
 
 app.use('/api/auth', authRoutes)
