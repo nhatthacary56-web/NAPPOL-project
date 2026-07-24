@@ -1,0 +1,109 @@
+.account-page__hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 16px;
+  background: var(--brand-grad);
+  color: #fff;
+}
+
+.account-page__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.account-page__brand {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.account-page__hero h1 {
+  margin: 2px 0;
+  font-size: 20px;
+}
+
+.account-page__sub {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.account-page__status-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 4px 8px 14px;
+}
+
+.account-page__status {
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.account-page__status span {
+  position: relative;
+  font-size: 22px;
+}
+
+.account-page__status em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.account-page__status span i {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.account-page__sub a {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.account-page__menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.account-page__menu-item:last-child {
+  border-bottom: 0;
+}
+
+.account-page__logout {
+  color: var(--brand);
+}

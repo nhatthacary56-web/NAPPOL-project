@@ -1,0 +1,37 @@
+.home-page {
+  background: var(--bg);
+}
+
+.home-page__tagline {
+  margin: 0;
+  padding: 6px 12px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.92);
+  background: var(--brand-gradient, var(--brand));
+}
+
+.home-page__shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 10px;
+  padding: 12px 8px;
+  background: var(--surface);
+}
+
+.home-page__shortcut {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.home-page__shortcut span {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.home-page__shortcut p {
+  margin: 0;
+}

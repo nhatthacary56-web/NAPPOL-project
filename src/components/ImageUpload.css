@@ -1,0 +1,40 @@
+.image-upload {
+  display: grid;
+  gap: 8px;
+}
+
+.image-upload__preview {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+.image-upload__row {
+  display: grid;
+  gap: 8px;
+}
+
+.image-upload__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  width: fit-content;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: #111827;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.image-upload__url {
+  min-height: 38px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0 10px;
+  font: inherit;
+}

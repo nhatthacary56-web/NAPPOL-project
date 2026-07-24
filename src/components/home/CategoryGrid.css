@@ -1,0 +1,35 @@
+.category-grid {
+  margin-top: -6px;
+  border-radius: 10px 10px 0 0;
+  padding: 14px 8px 8px;
+}
+
+.category-grid__list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px 4px;
+}
+
+.category-grid__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.category-grid__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+
+.category-grid__name {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--text);
+  max-width: 64px;
+}

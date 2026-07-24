@@ -1,0 +1,19 @@
+.product-grid-section {
+  margin-top: 10px;
+}
+
+.product-grid-section__head {
+  background: transparent;
+  padding-bottom: 6px;
+}
+
+.product-grid-section__head .section-title {
+  color: var(--text);
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 8px 8px;
+}

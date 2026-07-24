@@ -1,0 +1,155 @@
+import { useState } from 'react'
+import { formatPrice } from '../../data/catalog'
+import { statusLabel, useStore } from '../../store/StoreContext'
+import { useToast } from '../../store/ToastContext'
+import type { OrderStatus } from '../../api/types'
+import './SellerShell.css'
+
+const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
+  to_ship: 'shipping',
+  shipping: 'to_review',
+  to_review: 'completed',
+}
+
+const carriers = ['Kerry Express', 'Flash Express', 'Thai Post', 'J&T Express', 'SPX']
+
+export function SellerOrdersPage() {
+  const { orders, updateOrderStatus, refreshOrders } = useStore()
+  const { toast } = useToast()
+  const [shipOrderId, setShipOrderId] = useState<string | null>(null)
+  const [trackingNumber, setTrackingNumber] = useState('')
+  const [carrier, setCarrier] = useState(carriers[0])
+
+  async function advance(orderId: string, status: OrderStatus) {
+    if (status === 'shipping') {
+      setShipOrderId(orderId)
+      setTrackingNumber('')
+      setCarrier(carriers[0])
+      return
+    }
+    try {
+      await updateOrderStatus(orderId, status)
+      toast(`อัปเดตเป็น ${statusLabel(status)}`)
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'อัปเดตไม่สำเร็จ')
+    }
+  }
+
+  async function confirmShip() {
+    if (!shipOrderId) return
+    try {
+      await updateOrderStatus(shipOrderId, 'shipping', { trackingNumber, carrier })
+      toast('จัดส่งแล้ว · มีเลขพัสดุ')
+      setShipOrderId(null)
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'จัดส่งไม่สำเร็จ')
+    }
+  }
+
+  return (
+    <div className="seller-page">
+      <h1>ออเดอร์ร้าน</h1>
+      <p className="seller-page__sub">อัปเดตสถานะและใส่เลขพัสดุเมื่อจัดส่ง</p>
+      <div className="seller-card">
+        <button type="button" className="seller-btn ghost" onClick={() => void refreshOrders()}>
+          รีเฟรช
+        </button>
+        {orders.length === 0 ? (
+          <p style={{ color: '#6b7280' }}>ยังไม่มีออเดอร์</p>
+        ) : (
+          <table className="seller-table">
+            <thead>
+              <tr>
+                <th>รหัส</th>
+                <th>ลูกค้า</th>
+                <th>ยอด</th>
+                <th>สถานะ / พัสดุ</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((order) => {
+                const advanceTo = nextStatus[order.status]
+                return (
+                  <tr key={order.id}>
+                    <td>{order.id}</td>
+                    <td>
+                      {order.address.name}
+                      <div style={{ color: '#6b7280' }}>{order.address.phone}</div>
+                    </td>
+                    <td>
+                      {formatPrice(order.items.reduce((s, i) => s + i.price * i.qty, 0))}
+                      {order.status === 'unpaid' ? (
+                        <div style={{ color: '#b45309', fontSize: 12 }}>รอลูกค้าชำระ</div>
+                      ) : null}
+                    </td>
+                    <td>
+                      {statusLabel(order.status)}
+                      {order.trackingNumber ? (
+                        <div style={{ color: '#6b7280', fontSize: 12 }}>
+                          {order.carrier} · {order.trackingNumber}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td>
+                      {advanceTo ? (
+                        <button
+                          type="button"
+                          className="seller-btn"
+                          onClick={() => void advance(order.id, advanceTo)}
+                        >
+                          {advanceTo === 'shipping' ? 'จัดส่ง + เลขพัสดุ' : 'ไปขั้นถัดไป'}
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {shipOrderId ? (
+        <div className="seller-modal" role="dialog" aria-modal="true">
+          <div className="seller-modal__panel">
+            <h2>ใส่เลขพัสดุ</h2>
+            <p>ออเดอร์ {shipOrderId}</p>
+            <label>
+              บริษัทขนส่ง
+              <select value={carrier} onChange={(e) => setCarrier(e.target.value)}>
+                {carriers.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              เลขติดตามพัสดุ
+              <input
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="เช่น TH1234567890"
+                required
+              />
+            </label>
+            <div className="seller-modal__actions">
+              <button type="button" className="seller-btn ghost" onClick={() => setShipOrderId(null)}>
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="seller-btn"
+                disabled={!trackingNumber.trim()}
+                onClick={() => void confirmShip()}
+              >
+                ยืนยันจัดส่ง
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}

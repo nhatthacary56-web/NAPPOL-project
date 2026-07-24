@@ -1,0 +1,82 @@
+.banner-carousel {
+  padding: 10px 12px 0;
+  background: var(--brand-grad);
+}
+
+.banner-carousel__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 88%;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 12px;
+  scrollbar-width: none;
+}
+
+.banner-carousel__track::-webkit-scrollbar {
+  display: none;
+}
+
+.banner-card {
+  scroll-snap-align: start;
+  min-height: 120px;
+  padding: 18px 16px;
+  border-radius: var(--radius-md);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.banner-card::after {
+  content: '';
+  position: absolute;
+  right: -20px;
+  bottom: -30px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.banner-card--orange {
+  background: linear-gradient(135deg, #ff6a3d, #ee4d2d);
+}
+
+.banner-card--coral {
+  background: linear-gradient(135deg, #ff8a5c, #f0452d);
+}
+
+.banner-card--amber {
+  background: linear-gradient(135deg, #ffb347, #ff7a2f);
+}
+
+.banner-card__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+
+.banner-card__subtitle {
+  margin: 6px 0 14px;
+  font-size: 13px;
+  opacity: 0.95;
+  position: relative;
+  z-index: 1;
+}
+
+.banner-card__cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}

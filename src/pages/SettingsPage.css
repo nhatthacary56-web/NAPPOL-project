@@ -1,0 +1,40 @@
+.settings-page {
+  padding: 16px;
+  background: var(--surface);
+  min-height: calc(100dvh - var(--header-height));
+}
+
+.settings-page form {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-page label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.settings-page input {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 12px;
+}
+
+.settings-page input:disabled {
+  background: var(--bg);
+  color: var(--text-muted);
+}
+
+.settings-page button {
+  margin-top: 8px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}

@@ -1,0 +1,26 @@
+.search-page__bar {
+  padding: 0 12px 12px;
+  background: var(--brand-grad);
+}
+
+.search-page__bar input {
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  border-radius: 2px;
+  padding: 0 12px;
+  outline: none;
+}
+
+.search-page__clear {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.search-page {
+  padding-bottom: 16px;
+  min-height: calc(100dvh - 100px);
+}

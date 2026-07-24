@@ -1,0 +1,89 @@
+.addresses-page {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.address-card {
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.address-card h2 {
+  margin: 0;
+  font-size: 14px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.address-card h2 em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.address-card p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.address-card__actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.address-card__actions button {
+  border: 1px solid var(--border);
+  background: #fff;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.address-card__actions button.danger {
+  color: var(--brand);
+}
+
+.addresses-page__add,
+.address-form button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.address-form {
+  display: grid;
+  gap: 10px;
+  background: var(--surface);
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.address-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.address-form input {
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 10px;
+}
