@@ -4,7 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 import { initDb } from './db.js'
-import { isSupabaseConfigured } from './supabase.js'
+import { getStorageStatus, isSupabaseConfigured } from './supabase.js'
 import authRoutes from './routes/auth.js'
 import productRoutes from './routes/products.js'
 import shopRoutes from './routes/shops.js'
@@ -40,12 +40,16 @@ app.use(express.json({ limit: '2mb' }))
 app.use('/uploads', express.static(uploadsDir))
 
 app.get('/health', (_req, res) => {
+  const storage = getStorageStatus()
   res.json({
     ok: true,
     service: 'great-app',
     time: new Date().toISOString(),
-    storage: isSupabaseConfigured() ? 'supabase' : 'local',
-    supabaseConfigured: isSupabaseConfigured(),
+    storage: storage.configured ? 'supabase' : 'local',
+    supabaseConfigured: storage.configured,
+    supabaseKeyKind: storage.keyKind,
+    lastPersistAt: storage.lastPersistAt,
+    lastPersistError: storage.lastPersistError,
   })
 })
 

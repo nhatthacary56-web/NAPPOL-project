@@ -320,12 +320,14 @@ function save() {
   if (!isSupabaseConfigured()) return
   if (persistTimer) clearTimeout(persistTimer)
   persistTimer = setTimeout(() => {
-    void saveAppState(db).catch((err) => {
-      if (!supabaseWarned) {
-        supabaseWarned = true
+    void saveAppState(db)
+      .then(() => {
+        supabaseWarned = false
+      })
+      .catch((err) => {
         console.error('[supabase] save failed:', err.message || err)
-      }
-    })
+        supabaseWarned = true
+      })
   }, 400)
 }
 
