@@ -4,6 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 import { initDb } from './db.js'
+import { isSupabaseConfigured } from './supabase.js'
 import authRoutes from './routes/auth.js'
 import productRoutes from './routes/products.js'
 import shopRoutes from './routes/shops.js'
@@ -43,7 +44,8 @@ app.get('/health', (_req, res) => {
     ok: true,
     service: 'great-app',
     time: new Date().toISOString(),
-    storage: process.env.SUPABASE_URL ? 'supabase' : 'local',
+    storage: isSupabaseConfigured() ? 'supabase' : 'local',
+    supabaseConfigured: isSupabaseConfigured(),
   })
 })
 
