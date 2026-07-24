@@ -2,6 +2,8 @@ import express from 'express'
 import cors from 'cors'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import dotenv from 'dotenv'
+import { initDb } from './db.js'
 import authRoutes from './routes/auth.js'
 import productRoutes from './routes/products.js'
 import shopRoutes from './routes/shops.js'
@@ -19,12 +21,16 @@ import paymentRoutes from './routes/payments.js'
 import returnRoutes from './routes/returns.js'
 import helpRoutes from './routes/help.js'
 
+dotenv.config()
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const distDir = path.resolve(__dirname, '../dist')
 const uploadsDir = path.resolve(__dirname, 'uploads')
 const port = Number(process.env.PORT) || 3000
 const isProd = process.env.NODE_ENV === 'production'
+
+await initDb()
 
 const app = express()
 app.disable('x-powered-by')
@@ -33,7 +39,12 @@ app.use(express.json({ limit: '2mb' }))
 app.use('/uploads', express.static(uploadsDir))
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'great-app', time: new Date().toISOString() })
+  res.json({
+    ok: true,
+    service: 'great-app',
+    time: new Date().toISOString(),
+    storage: process.env.SUPABASE_URL ? 'supabase' : 'local',
+  })
 })
 
 app.use('/api/auth', authRoutes)
@@ -70,6 +81,7 @@ if (isProd) {
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Great App API at http://0.0.0.0:${port}`)
+  console.log(`Storage: ${process.env.SUPABASE_URL ? 'Supabase' : 'local db.json'}`)
   console.log(`Demo accounts:`)
   console.log(`  admin@great.app / greatadmin`)
   console.log(`  seller@great.app / seller123`)

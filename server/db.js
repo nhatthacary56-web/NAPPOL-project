@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import bcrypt from 'bcryptjs'
 import { uid } from './util.js'
+import { fetchAppState, isSupabaseConfigured, saveAppState } from './supabase.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const dataDir = path.join(__dirname, 'data')
@@ -305,24 +306,76 @@ function defaultAppContent() {
 
 /** @type {ReturnType<typeof emptyDb>} */
 let db = emptyDb()
+let ready = false
+let persistTimer = null
+let supabaseWarned = false
 
-function save() {
+function saveLocal() {
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
   fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8')
 }
 
-function load() {
-  if (!fs.existsSync(dbPath)) {
-    db = emptyDb()
-    seed()
-    save()
-    return
-  }
-  db = migrate({ ...emptyDb(), ...JSON.parse(fs.readFileSync(dbPath, 'utf8')) })
+function save() {
+  saveLocal()
+  if (!isSupabaseConfigured()) return
+  if (persistTimer) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    void saveAppState(db).catch((err) => {
+      if (!supabaseWarned) {
+        supabaseWarned = true
+        console.error('[supabase] save failed:', err.message || err)
+      }
+    })
+  }, 400)
+}
+
+function loadFromObject(raw) {
+  db = migrate({ ...emptyDb(), ...raw })
   if (!db.meta?.seeded) {
     seed()
   }
-  save()
+}
+
+function loadLocalFile() {
+  if (!fs.existsSync(dbPath)) {
+    db = emptyDb()
+    seed()
+    saveLocal()
+    return
+  }
+  loadFromObject(JSON.parse(fs.readFileSync(dbPath, 'utf8')))
+  saveLocal()
+}
+
+export async function initDb() {
+  if (ready) return db
+  if (isSupabaseConfigured()) {
+    try {
+      const remote = await fetchAppState()
+      if (remote && typeof remote === 'object') {
+        loadFromObject(remote)
+        saveLocal()
+        console.log('[supabase] loaded app_state from Supabase')
+      } else {
+        loadLocalFile()
+        await saveAppState(db)
+        console.log('[supabase] seeded app_state to Supabase')
+      }
+      ready = true
+      return db
+    } catch (err) {
+      console.error('[supabase] init failed:', err.message || err)
+      if (err.code === 'NO_TABLE') {
+        console.error(
+          '[supabase] Open Dashboard → SQL Editor and run supabase/schema.sql then restart',
+        )
+      }
+      console.error('[supabase] falling back to local db.json')
+    }
+  }
+  loadLocalFile()
+  ready = true
+  return db
 }
 
 function seed() {
@@ -642,5 +695,3 @@ export function reverseShopPending(shopId, amount) {
 export function createId(prefix) {
   return uid(prefix)
 }
-
-load()

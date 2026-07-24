@@ -12,10 +12,12 @@
     "serve": "npm run build && npm start"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
     "bcryptjs": "^3.0.2",
     "concurrently": "^9.2.0",
     "cors": "^2.8.5",
     "cross-env": "^7.0.3",
+    "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
