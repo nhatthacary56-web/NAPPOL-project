@@ -4,7 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 import { initDb } from './db.js'
-import { getStorageStatus, isSupabaseConfigured } from './supabase.js'
+import { getStorageStatus } from './supabase.js'
 import authRoutes from './routes/auth.js'
 import productRoutes from './routes/products.js'
 import shopRoutes from './routes/shops.js'
@@ -86,8 +86,16 @@ if (isProd) {
 }
 
 app.listen(port, '0.0.0.0', () => {
+  const storage = getStorageStatus()
   console.log(`Great App API at http://0.0.0.0:${port}`)
-  console.log(`Storage: ${process.env.SUPABASE_URL ? 'Supabase' : 'local db.json'}`)
+  console.log(
+    `Storage: ${storage.configured ? `Supabase (${storage.keyKind})` : 'local db.json'}`,
+  )
+  if (storage.keyKind === 'publishable') {
+    console.error(
+      '[supabase] SUPABASE_SECRET_KEY looks like a publishable key — use sb_secret_... instead',
+    )
+  }
   console.log(`Demo accounts:`)
   console.log(`  admin@great.app / greatadmin`)
   console.log(`  seller@great.app / seller123`)

@@ -354,15 +354,16 @@ export async function initDb() {
   if (isSupabaseConfigured()) {
     try {
       const remote = await fetchAppState()
-      if (remote && typeof remote === 'object') {
+      if (remote && typeof remote === 'object' && (remote.users || remote.meta)) {
         loadFromObject(remote)
         saveLocal()
         console.log('[supabase] loaded app_state from Supabase')
       } else {
         loadLocalFile()
-        await saveAppState(db)
-        console.log('[supabase] seeded app_state to Supabase')
+        console.log('[supabase] no remote snapshot yet — seeding')
       }
+      await saveAppState(db)
+      console.log('[supabase] persist ok')
       ready = true
       return db
     } catch (err) {

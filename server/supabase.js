@@ -1,9 +1,27 @@
 import { createClient } from '@supabase/supabase-js'
 
 let client = null
+let lastPersistError = null
+let lastPersistAt = null
 
 export function isSupabaseConfigured() {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SECRET_KEY)
+}
+
+export function getStorageStatus() {
+  const key = process.env.SUPABASE_SECRET_KEY || ''
+  return {
+    configured: isSupabaseConfigured(),
+    keyKind: key.startsWith('sb_secret_')
+      ? 'secret'
+      : key.startsWith('sb_publishable_')
+        ? 'publishable'
+        : key
+          ? 'legacy_or_unknown'
+          : 'missing',
+    lastPersistAt,
+    lastPersistError,
+  }
 }
 
 export function getSupabaseAdmin() {
@@ -43,7 +61,12 @@ export async function saveAppState(payload) {
     updated_at: new Date().toISOString(),
   })
   if (error) {
-    const msg = error.message || String(error)
+    let msg = error.message || String(error)
+    if (/row-level security|42501/i.test(msg)) {
+      msg =
+        'เขียนไม่สำเร็จ: SUPABASE_SECRET_KEY ต้องเป็น sb_secret_... (อย่าใส่ publishable key)'
+    }
+    lastPersistError = msg
     if (/relation|does not exist|schema cache/i.test(msg)) {
       const err = new Error(
         'ยังไม่มีตาราง app_state — เปิด Supabase → SQL Editor แล้วรันไฟล์ supabase/schema.sql',
@@ -53,5 +76,7 @@ export async function saveAppState(payload) {
     }
     throw new Error(msg)
   }
+  lastPersistAt = new Date().toISOString()
+  lastPersistError = null
   return true
 }
