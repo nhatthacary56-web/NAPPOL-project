@@ -337,12 +337,38 @@ export async function getShipmentLabels(order) {
     ? { orderidlist: String(order.zortOrderId) }
     : { numberlist: orderNumberFor(order) }
   const json = await zortRequest('GET', '/Order/GetShipmentLabels', { query })
-  const list = Array.isArray(json) ? json : json?.list || json?.detail || []
+  const list = Array.isArray(json)
+    ? json
+    : json?.data || json?.list || json?.detail || []
   const first = Array.isArray(list) ? list[0] : null
-  if (!first) return { shippingLabelUrl: null, labels: [], raw: json }
+  if (!first) return { shippingLabelUrl: null, labels: [], raw: json, printableInline: false }
+
+  const format = String(first.Format || first.format || '').toLowerCase()
+  const rawData = first.Data ?? first.data ?? null
+  const linkurl = first.linkurl || first.LinkUrl || null
+
+  // Pdf/Html can be inlined on our site. Format=Url points at ZORT login pages — do not send sellers there.
+  let shippingLabelUrl = null
+  let inlineData = null
+  let printableInline = false
+  if (format === 'pdf' && typeof rawData === 'string' && rawData.length > 32) {
+    inlineData = rawData
+    printableInline = true
+  } else if (format === 'html' && typeof rawData === 'string' && rawData.length > 32) {
+    inlineData = rawData
+    printableInline = true
+  } else if (linkurl && !/secure\.zortout\.com|zortout\.com\/Home\/LogOn/i.test(linkurl)) {
+    shippingLabelUrl = linkurl
+  } else {
+    // Keep for diagnostics only; UI should print Great App label instead.
+    shippingLabelUrl = linkurl || (typeof rawData === 'string' && /^https?:/i.test(rawData) ? rawData : null)
+  }
+
   return {
-    shippingLabelUrl: first.linkurl || first.Data || null,
-    format: first.Format || first.type || null,
+    shippingLabelUrl,
+    format: format || first.type || null,
+    inlineData,
+    printableInline,
     labels: list,
     raw: json,
   }

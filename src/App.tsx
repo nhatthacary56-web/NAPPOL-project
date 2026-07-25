@@ -17,6 +17,7 @@ import { RegisterPage } from './pages/RegisterPage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
+import { ShippingLabelPage } from './pages/ShippingLabelPage'
 import { WishlistPage } from './pages/WishlistPage'
 import { VouchersPage } from './pages/VouchersPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -129,6 +130,14 @@ export default function App() {
         element={
           <RequireAuth>
             <OrderDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="orders/:id/label"
+        element={
+          <RequireAuth>
+            <ShippingLabelPage />
           </RequireAuth>
         }
       />

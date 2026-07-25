@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { formatPrice } from '../../data/catalog'
 import { orderApi } from '../../api'
 import { statusLabel, useStore } from '../../store/StoreContext'
@@ -47,11 +48,13 @@ export function SellerOrdersPage() {
 
   async function confirmShip() {
     if (!shipOrderId) return
+    const id = shipOrderId
     try {
-      await updateOrderStatus(shipOrderId, 'shipping', { trackingNumber, carrier })
-      toast('จัดส่งแล้ว · มีเลขพัสดุ')
+      await updateOrderStatus(id, 'shipping', { trackingNumber, carrier })
+      toast('จัดส่งแล้ว · เปิดใบปะหน้าบนเว็บเรา')
       setShipOrderId(null)
       await refreshOrders()
+      window.open(`/orders/${id}/label?print=1`, '_blank', 'noopener,noreferrer')
     } catch (error) {
       toast(error instanceof Error ? error.message : 'จัดส่งไม่สำเร็จ')
     }
@@ -61,8 +64,9 @@ export function SellerOrdersPage() {
     setBusyId(orderId)
     try {
       const res = await orderApi.zortShip(orderId, { carrier: 'Kerry Express' })
-      toast(res.message || `ZORT: ${res.order.trackingNumber}`)
+      toast(res.message || `ได้เลขพัสดุ ${res.order.trackingNumber || ''} · เปิดใบปะหน้าบนเว็บเรา`)
       await refreshOrders()
+      window.open(`/orders/${orderId}/label?print=1`, '_blank', 'noopener,noreferrer')
     } catch (error) {
       toast(error instanceof Error ? error.message : 'เรียก ZORT ไม่สำเร็จ')
     } finally {
@@ -74,7 +78,7 @@ export function SellerOrdersPage() {
     <div className="seller-page">
       <h1>ออเดอร์ร้าน</h1>
       <p className="seller-page__sub">
-        อัปเดตสถานะ / เรียกขนส่ง ZORT เพื่อขอเลข Tracking และใบปะหน้า
+        เรียกขนส่งผ่าน ZORT ได้เลขพัสดุ แล้วพิมพ์ใบปะหน้าบน Great App ได้เลย (ไม่ต้องเข้าเว็บขนส่ง)
         {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
       </p>
       <div className="seller-card">
@@ -117,16 +121,14 @@ export function SellerOrdersPage() {
                           {order.carrier} · {order.trackingNumber}
                         </div>
                       ) : null}
-                      {order.shippingLabelUrl ? (
+                      {order.trackingNumber || order.status === 'shipping' || order.status === 'to_ship' ? (
                         <div>
-                          <a
-                            href={order.shippingLabelUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ color: '#ee4d2d', fontSize: 12 }}
+                          <Link
+                            to={`/orders/${order.id}/label`}
+                            style={{ color: '#ee4d2d', fontSize: 12, fontWeight: 700 }}
                           >
-                            เปิดใบปะหน้า
-                          </a>
+                            พิมพ์ใบปะหน้า
+                          </Link>
                         </div>
                       ) : null}
                     </td>

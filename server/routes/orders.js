@@ -612,7 +612,8 @@ router.post('/:id/zort/ship', requireAuth, async (req, res) => {
     res.json({
       ok: true,
       order,
-      message: 'เรียกขนส่ง ZORT สำเร็จ',
+      message: `ได้เลขพัสดุ ${order.trackingNumber} · พิมพ์ใบปะหน้าได้ที่ /orders/${order.id}/label`,
+      printPath: `/orders/${order.id}/label`,
     })
   } catch (error) {
     res.status(502).json({

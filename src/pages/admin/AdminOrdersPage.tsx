@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { formatPrice } from '../../data/catalog'
 import { orderApi } from '../../api'
 import { statusLabel, useStore } from '../../store/StoreContext'
@@ -60,8 +61,9 @@ export function AdminOrdersPage() {
     setBusyId(orderId)
     try {
       const res = await orderApi.zortShip(orderId, { carrier: 'Kerry Express' })
-      toast(res.message || `ZORT: ${res.order.trackingNumber}`)
+      toast(res.message || `ได้เลขพัสดุ ${res.order.trackingNumber || ''} · เปิดใบปะหน้าบนเว็บเรา`)
       await refreshOrders()
+      window.open(`/orders/${orderId}/label?print=1`, '_blank', 'noopener,noreferrer')
     } catch (error) {
       toast(error instanceof Error ? error.message : 'เรียก ZORT ไม่สำเร็จ')
     } finally {
@@ -73,7 +75,7 @@ export function AdminOrdersPage() {
     <div className="admin-page">
       <h1>คำสั่งซื้อ</h1>
       <p className="admin-page__sub">
-        จัดการออเดอร์ · เรียกขนส่ง ZORT เพื่อขอ Tracking / ใบปะหน้า
+        เรียกขนส่งผ่าน ZORT ได้เลขพัสดุ แล้วพิมพ์ใบปะหน้าบน Great App (ไม่ต้องล็อกอินเว็บขนส่ง)
         {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
       </p>
       <div className="admin-card">
@@ -116,16 +118,14 @@ export function AdminOrdersPage() {
                           {order.carrier} · {order.trackingNumber}
                         </div>
                       ) : null}
-                      {order.shippingLabelUrl ? (
+                      {order.trackingNumber || order.status === 'shipping' || order.status === 'to_ship' ? (
                         <div>
-                          <a
-                            href={order.shippingLabelUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ color: '#ee4d2d', fontSize: 12 }}
+                          <Link
+                            to={`/orders/${order.id}/label`}
+                            style={{ color: '#ee4d2d', fontSize: 12, fontWeight: 700 }}
                           >
-                            ใบปะหน้า
-                          </a>
+                            พิมพ์ใบปะหน้า
+                          </Link>
                         </div>
                       ) : null}
                     </td>

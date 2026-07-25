@@ -132,13 +132,9 @@ export function OrderDetailPage() {
             <p>
               {order.carrier || 'ขนส่ง'} · <strong>{order.trackingNumber}</strong>
             </p>
-            {order.shippingLabelUrl ? (
-              <p>
-                <a href={order.shippingLabelUrl} target="_blank" rel="noreferrer">
-                  เปิดใบปะหน้า / Shipping Label
-                </a>
-              </p>
-            ) : null}
+            <p>
+              <Link to={`/orders/${order.id}/label`}>พิมพ์ใบปะหน้าบน Great App</Link>
+            </p>
             {order.shippedAt ? (
               <p className="muted">
                 จัดส่งเมื่อ {new Date(order.shippedAt).toLocaleString('th-TH')}
