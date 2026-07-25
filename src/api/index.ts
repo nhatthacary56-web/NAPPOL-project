@@ -96,6 +96,40 @@ export const catalogApi = {
   update: (id: string, body: Partial<ApiProduct>) =>
     api<{ ok: true; product: ApiProduct }>(`/products/${id}`, { method: 'PATCH', json: body }),
   remove: (id: string) => api<{ ok: true }>(`/products/${id}`, { method: 'DELETE' }),
+  visualSearchFile: async (file: File, extras?: { excludeId?: string }) => {
+    const form = new FormData()
+    form.append('image', file)
+    if (extras?.excludeId) form.append('excludeId', extras.excludeId)
+    const headers = new Headers()
+    const token = getToken()
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    const res = await fetch('/api/products/visual-search', {
+      method: 'POST',
+      headers,
+      body: form,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.message || 'ค้นหาด้วยรูปไม่สำเร็จ')
+    return data as {
+      ok: true
+      products: ApiProduct[]
+      message?: string
+      exactish?: boolean
+      queryColor?: { r: number; g: number; b: number }
+      guessedCategory?: string | null
+    }
+  },
+  visualSearchByProduct: (productId: string) =>
+    api<{
+      ok: true
+      products: ApiProduct[]
+      message?: string
+      exactish?: boolean
+      queryColor?: { r: number; g: number; b: number }
+    }>('/products/visual-search', {
+      method: 'POST',
+      json: { productId },
+    }),
 }
 
 export const shopApi = {

@@ -18,6 +18,7 @@ import { CheckoutPage } from './pages/CheckoutPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { ShippingLabelPage } from './pages/ShippingLabelPage'
+import { VisualSearchPage } from './pages/VisualSearchPage'
 import { WishlistPage } from './pages/WishlistPage'
 import { VouchersPage } from './pages/VouchersPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -101,6 +102,7 @@ export default function App() {
 
       <Route path="cart" element={<CartPage />} />
       <Route path="search" element={<SearchPage />} />
+      <Route path="search/visual" element={<VisualSearchPage />} />
       <Route path="product/:id" element={<ProductPage />} />
       <Route path="category/:slug" element={<CategoryPage />} />
       <Route path="shop/:slug" element={<ShopPage />} />

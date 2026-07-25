@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import multer from 'multer'
 import {
   createId,
   enrichProduct,
@@ -8,8 +9,26 @@ import {
   persist,
 } from '../db.js'
 import { requireAuth, authOptional } from '../auth.js'
+import {
+  extractColorFromBuffer,
+  extractColorFromImageUrl,
+  matchProductsByColor,
+  ensureProductVisualColor,
+} from '../visualSearch.js'
 
 const router = Router()
+
+const visualUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      cb(new Error('อัปโหลดได้เฉพาะไฟล์รูปภาพ'))
+      return
+    }
+    cb(null, true)
+  },
+})
 
 function normalizeVariants(raw) {
   if (!Array.isArray(raw)) return []
@@ -63,6 +82,95 @@ router.get('/manage/mine', requireAuth, (req, res) => {
     list = shop ? list.filter((p) => p.shopId === shop.id) : []
   }
   res.json({ ok: true, products: list.map(enrichProduct) })
+})
+
+/**
+ * MVP visual search — match by dominant color (+ category boost). Low cost, no external AI.
+ * multipart image OR JSON { productId | imageUrl | color }
+ */
+async function runVisualSearch(req, res) {
+  try {
+    const db = getDb()
+    let queryColor = null
+    let source = 'upload'
+    let excludeId = req.body?.excludeId ? String(req.body.excludeId) : null
+
+    if (req.file?.buffer) {
+      queryColor = extractColorFromBuffer(req.file.buffer, req.file.mimetype)
+      source = 'upload'
+    } else if (req.body?.productId) {
+      const product = db.products.find((p) => p.id === String(req.body.productId))
+      if (!product) return res.status(404).json({ ok: false, message: 'ไม่พบสินค้าอ้างอิง' })
+      let dirty = false
+      queryColor = await ensureProductVisualColor(product, {
+        markDirty: () => {
+          dirty = true
+        },
+      })
+      if (dirty) persist()
+      excludeId = product.id
+      source = 'product'
+    } else if (req.body?.imageUrl) {
+      queryColor = await extractColorFromImageUrl(String(req.body.imageUrl))
+      if (!queryColor) {
+        return res.status(400).json({ ok: false, message: 'โหลดรูปจากลิงก์ไม่สำเร็จ' })
+      }
+      source = 'url'
+    } else if (req.body?.color?.r != null) {
+      queryColor = {
+        r: Number(req.body.color.r),
+        g: Number(req.body.color.g),
+        b: Number(req.body.color.b),
+      }
+      source = 'color'
+    } else {
+      return res.status(400).json({
+        ok: false,
+        message: 'ส่งรูปภาพ หรือ productId เพื่อค้นหาของคล้ายกัน',
+      })
+    }
+
+    const result = await matchProductsByColor(queryColor, {
+      excludeId,
+      limit: Math.min(40, Number(req.body?.limit) || 24),
+    })
+
+    const products = result.matches.map((m) => ({
+      ...enrichProduct(m.product),
+      matchScore: Math.round(m.score),
+    }))
+
+    res.json({
+      ok: true,
+      source,
+      exactish: result.exactish,
+      guessedCategory: result.guessedCategory,
+      queryColor: result.queryColor,
+      message: result.exactish
+        ? 'พบสินค้าที่โทนสีใกล้เคียงมาก'
+        : 'ยังไม่เจอของตรงเป๊ะ — แสดงสินค้าที่คล้ายที่สุด',
+      products,
+    })
+  } catch (error) {
+    res.status(502).json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'ค้นหาด้วยรูปไม่สำเร็จ',
+    })
+  }
+}
+
+router.post('/visual-search', authOptional, (req, res) => {
+  const isMultipart = String(req.headers['content-type'] || '').includes('multipart/form-data')
+  if (isMultipart) {
+    visualUpload.single('image')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ ok: false, message: err.message || 'อัปโหลดไม่สำเร็จ' })
+      }
+      void runVisualSearch(req, res)
+    })
+    return
+  }
+  void runVisualSearch(req, res)
 })
 
 router.get('/:id', authOptional, (req, res) => {

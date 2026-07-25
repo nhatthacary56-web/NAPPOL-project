@@ -156,8 +156,41 @@
 
 .product-page__ship,
 .product-page__detail,
+.product-page__similar,
 .product-page__reviews-wrap {
   padding: 14px 12px;
+}
+
+.product-page__similar {
+  border-top: 1px solid var(--border, #eceff3);
+  border-bottom: 1px solid var(--border, #eceff3);
+  background: #fafafa;
+}
+
+.product-page__similar-btn {
+  width: 100%;
+  appearance: none;
+  border: 1px dashed color-mix(in srgb, var(--brand) 45%, #d1d5db);
+  background: #fff;
+  border-radius: 12px;
+  min-height: 48px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--brand);
+  cursor: pointer;
+}
+
+.product-page__similar p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  text-align: center;
 }
 
 .product-page__ship h2,
