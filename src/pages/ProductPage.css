@@ -155,22 +155,29 @@
 }
 
 .product-page__ship,
-.product-page__desc {
+.product-page__detail,
+.product-page__reviews-wrap {
   padding: 14px 12px;
 }
 
 .product-page__ship h2,
-.product-page__desc h2 {
+.product-page__detail h2,
+.product-page__reviews-wrap h2 {
   margin: 0 0 8px;
   font-size: 14px;
 }
 
 .product-page__ship p,
-.product-page__desc p {
+.product-page__detail p,
+.product-page__reviews-wrap p {
   margin: 0;
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+.product-page__detail p {
+  white-space: pre-wrap;
 }
 
 .product-page__footer {

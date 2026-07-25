@@ -26,7 +26,7 @@ function normalizeVariants(raw) {
 
 router.get('/', authOptional, (req, res) => {
   const db = getDb()
-  const { q, category, shopId, flash } = req.query
+  const { q, category, shopId, shopCategory, flash } = req.query
   let list = db.products.filter((p) => p.status === 'active')
 
   list = list.filter((p) => {
@@ -36,10 +36,17 @@ router.get('/', authOptional, (req, res) => {
 
   if (category) list = list.filter((p) => p.categorySlug === category)
   if (shopId) list = list.filter((p) => p.shopId === shopId)
+  if (shopCategory) list = list.filter((p) => p.shopCategoryId === String(shopCategory))
   if (flash === '1') list = list.filter((p) => p.flashSale)
   if (q) {
     const term = String(q).toLowerCase()
-    list = list.filter((p) => p.name.toLowerCase().includes(term))
+    list = list.filter(
+      (p) =>
+        p.name.toLowerCase().includes(term) ||
+        String(p.description || '')
+          .toLowerCase()
+          .includes(term),
+    )
   }
 
   res.json({ ok: true, products: list.map(enrichProduct) })
@@ -94,15 +101,34 @@ router.post('/', requireAuth, (req, res) => {
     images,
     location,
     categorySlug,
+    shopCategoryId,
+    description,
     badge,
     flashSale,
     flashEndsAt,
     stock,
     variants,
+    status,
   } = req.body ?? {}
 
   if (!name?.trim() || !price || !categorySlug) {
-    return res.status(400).json({ ok: false, message: 'กรอกชื่อ ราคา และหมวดหมู่' })
+    return res.status(400).json({
+      ok: false,
+      message: 'กรอกชื่อ ราคา และหมวดบนแอป (แพลตฟอร์ม)',
+    })
+  }
+  if (String(name).trim().length > 120) {
+    return res.status(400).json({ ok: false, message: 'ชื่อสินค้ายาวเกิน 120 ตัวอักษร' })
+  }
+  const desc = String(description || '').trim()
+  if (desc.length > 5000) {
+    return res.status(400).json({ ok: false, message: 'รายละเอียดยาวเกิน 5000 ตัวอักษร' })
+  }
+
+  const shopCats = Array.isArray(shop.shopCategories) ? shop.shopCategories : []
+  let resolvedShopCategoryId = shopCategoryId ? String(shopCategoryId) : null
+  if (resolvedShopCategoryId && !shopCats.some((c) => c.id === resolvedShopCategoryId)) {
+    return res.status(400).json({ ok: false, message: 'ไม่พบหมวดในร้านที่เลือก' })
   }
 
   const imageList = Array.isArray(images)
@@ -115,11 +141,13 @@ router.post('/', requireAuth, (req, res) => {
   }
 
   const variantList = normalizeVariants(variants)
+  const nextStatus = ['active', 'hidden', 'draft'].includes(status) ? status : 'active'
 
   const product = {
     id: createId('p'),
     shopId: shop.id,
     name: name.trim(),
+    description: desc,
     price: Number(price),
     originalPrice: originalPrice ? Number(originalPrice) : undefined,
     image: imageList[0],
@@ -132,10 +160,11 @@ router.post('/', requireAuth, (req, res) => {
     rating: 5,
     location: location?.trim() || shop.location || 'ไทย',
     categorySlug,
+    shopCategoryId: resolvedShopCategoryId,
     badge: badge?.trim() || undefined,
     flashSale: Boolean(flashSale),
     flashEndsAt: flashEndsAt || null,
-    status: 'active',
+    status: nextStatus,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
@@ -161,11 +190,13 @@ router.patch('/:id', requireAuth, (req, res) => {
 
   const fields = [
     'name',
+    'description',
     'price',
     'originalPrice',
     'image',
     'location',
     'categorySlug',
+    'shopCategoryId',
     'badge',
     'flashSale',
     'flashEndsAt',
@@ -183,6 +214,32 @@ router.patch('/:id', requireAuth, (req, res) => {
             : Number(req.body[key])
       } else if (key === 'flashSale') {
         product[key] = Boolean(req.body[key])
+      } else if (key === 'description') {
+        const desc = String(req.body[key] || '').trim()
+        if (desc.length > 5000) {
+          return res.status(400).json({ ok: false, message: 'รายละเอียดยาวเกิน 5000 ตัวอักษร' })
+        }
+        product.description = desc
+      } else if (key === 'name') {
+        const n = String(req.body[key] || '').trim()
+        if (!n) return res.status(400).json({ ok: false, message: 'กรอกชื่อสินค้า' })
+        if (n.length > 120) {
+          return res.status(400).json({ ok: false, message: 'ชื่อสินค้ายาวเกิน 120 ตัวอักษร' })
+        }
+        product.name = n
+      } else if (key === 'status') {
+        if (!['active', 'hidden', 'draft'].includes(req.body[key])) {
+          return res.status(400).json({ ok: false, message: 'สถานะไม่ถูกต้อง' })
+        }
+        product.status = req.body[key]
+      } else if (key === 'shopCategoryId') {
+        const shop = getShopById(product.shopId)
+        const shopCats = Array.isArray(shop?.shopCategories) ? shop.shopCategories : []
+        const val = req.body[key] ? String(req.body[key]) : null
+        if (val && !shopCats.some((c) => c.id === val)) {
+          return res.status(400).json({ ok: false, message: 'ไม่พบหมวดในร้านที่เลือก' })
+        }
+        product.shopCategoryId = val
       } else {
         product[key] = req.body[key]
       }

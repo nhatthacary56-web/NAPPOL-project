@@ -214,6 +214,12 @@ export function ProductPage() {
             </p>
           ) : null}
         </section>
+        {product.description ? (
+          <section className="product-page__detail section">
+            <h2>รายละเอียดสินค้า</h2>
+            <p>{product.description}</p>
+          </section>
+        ) : null}
         <section className="product-page__ship section">
           <h2>การจัดส่ง</h2>
           <p>
@@ -222,7 +228,7 @@ export function ProductPage() {
               .replace('{freeShippingMin}', String(shipping.freeShippingMin))}
           </p>
         </section>
-        <section className="product-page__desc section">
+        <section className="product-page__reviews-wrap section">
           <h2>รีวิวจากผู้ซื้อ</h2>
           {reviews.length === 0 ? (
             <p>ยังไม่มีรีวิว</p>

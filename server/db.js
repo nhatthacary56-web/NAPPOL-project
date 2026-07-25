@@ -433,6 +433,10 @@ function seed() {
       description: 'ร้านตัวอย่างสำหรับทดลองระบบ (ยังไม่เปิดขายจริง)',
       location: 'กรุงเทพฯ',
       status: 'active',
+      shopCategories: [
+        { id: 'sc_demo_1', name: 'สินค้าแนะนำ', sortOrder: 0 },
+        { id: 'sc_demo_2', name: 'เสื้อผ้า', sortOrder: 1 },
+      ],
       createdAt: new Date().toISOString(),
     },
   ]
@@ -440,6 +444,8 @@ function seed() {
   db.products = seedProductDefs.map((p, index) => ({
     ...p,
     shopId,
+    description: p.description || '',
+    shopCategoryId: index % 2 === 0 ? 'sc_demo_1' : 'sc_demo_2',
     stock: 50 + index * 10,
     status: 'active',
     createdAt: new Date().toISOString(),

@@ -20,6 +20,7 @@ import type {
   OrderStatus,
   PlatformSettings,
   Shop,
+  ShopCategory,
 } from './types'
 
 export const authApi = {
@@ -101,14 +102,39 @@ export const shopApi = {
   all: () => api<{ ok: true; shops: Shop[] }>('/shops/all'),
   pending: () => api<{ ok: true; shops: Shop[] }>('/shops/pending'),
   mine: () => api<{ ok: true; shop: Shop | null }>('/shops/mine'),
-  bySlug: (slug: string) =>
-    api<{ ok: true; shop: Shop; products: ApiProduct[] }>(`/shops/${slug}`),
+  bySlug: (slug: string, params?: { shopCategory?: string }) => {
+    const qs = new URLSearchParams()
+    if (params?.shopCategory) qs.set('shopCategory', params.shopCategory)
+    const q = qs.toString()
+    return api<{
+      ok: true
+      shop: Shop
+      shopCategories?: ShopCategory[]
+      products: ApiProduct[]
+    }>(`/shops/${slug}${q ? `?${q}` : ''}`)
+  },
   register: (body: { name: string; description?: string; location?: string }) =>
     api<{ ok: true; shop: Shop }>('/shops/register', { method: 'POST', json: body }),
   updateMine: (body: Partial<Shop>) =>
     api<{ ok: true; shop: Shop }>('/shops/mine', { method: 'PATCH', json: body }),
   setStatus: (id: string, status: Shop['status']) =>
     api<{ ok: true; shop: Shop }>(`/shops/${id}/status`, { method: 'PATCH', json: { status } }),
+  listShopCategories: () =>
+    api<{ ok: true; categories: ShopCategory[] }>('/shops/mine/categories'),
+  createShopCategory: (name: string) =>
+    api<{ ok: true; category: ShopCategory; categories: ShopCategory[] }>(
+      '/shops/mine/categories',
+      { method: 'POST', json: { name } },
+    ),
+  updateShopCategory: (id: string, body: { name?: string; sortOrder?: number }) =>
+    api<{ ok: true; category: ShopCategory; categories: ShopCategory[] }>(
+      `/shops/mine/categories/${id}`,
+      { method: 'PATCH', json: body },
+    ),
+  removeShopCategory: (id: string) =>
+    api<{ ok: true; categories: ShopCategory[] }>(`/shops/mine/categories/${id}`, {
+      method: 'DELETE',
+    }),
 }
 
 export const orderApi = {

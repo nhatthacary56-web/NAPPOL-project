@@ -30,6 +30,7 @@ router.get('/pending', requireRole('admin'), (_req, res) => {
 
 router.get('/mine', requireRole('seller', 'admin'), (req, res) => {
   const shop = getShopByOwner(req.user.id)
+  if (shop && !Array.isArray(shop.shopCategories)) shop.shopCategories = []
   res.json({ ok: true, shop: shop ?? null })
 })
 
@@ -63,6 +64,7 @@ router.post('/register', requireAuth, (req, res) => {
     description: description?.trim() || '',
     location: location?.trim() || 'ไทย',
     status: req.user.role === 'admin' ? 'active' : 'pending',
+    shopCategories: [],
     createdAt: new Date().toISOString(),
   }
 
@@ -80,8 +82,83 @@ router.patch('/mine', requireRole('seller', 'admin'), (req, res) => {
   if (req.body.name) shop.name = String(req.body.name).trim()
   if (req.body.description !== undefined) shop.description = String(req.body.description).trim()
   if (req.body.location) shop.location = String(req.body.location).trim()
+  if (!Array.isArray(shop.shopCategories)) shop.shopCategories = []
   persist()
   res.json({ ok: true, shop })
+})
+
+function ensureShopCategories(shop) {
+  if (!Array.isArray(shop.shopCategories)) shop.shopCategories = []
+  return shop.shopCategories
+}
+
+/** หมวดในร้าน — seller สร้างเอง (ไม่ใช่หมวดหน้าแอป) */
+router.get('/mine/categories', requireRole('seller', 'admin'), (req, res) => {
+  const shop = getShopByOwner(req.user.id)
+  if (!shop) return res.status(404).json({ ok: false, message: 'ยังไม่มีร้าน' })
+  res.json({ ok: true, categories: ensureShopCategories(shop) })
+})
+
+router.post('/mine/categories', requireRole('seller', 'admin'), (req, res) => {
+  const shop = getShopByOwner(req.user.id)
+  if (!shop) return res.status(404).json({ ok: false, message: 'ยังไม่มีร้าน' })
+  const name = String(req.body?.name || '').trim()
+  if (!name) return res.status(400).json({ ok: false, message: 'กรอกชื่อหมวดในร้าน' })
+  if (name.length > 40) {
+    return res.status(400).json({ ok: false, message: 'ชื่อหมวดยาวเกิน 40 ตัวอักษร' })
+  }
+  const list = ensureShopCategories(shop)
+  if (list.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+    return res.status(409).json({ ok: false, message: 'มีหมวดชื่อนี้อยู่แล้ว' })
+  }
+  const category = {
+    id: createId('sc'),
+    name,
+    sortOrder: list.length,
+  }
+  list.push(category)
+  persist()
+  res.status(201).json({ ok: true, category, categories: list })
+})
+
+router.patch('/mine/categories/:catId', requireRole('seller', 'admin'), (req, res) => {
+  const shop = getShopByOwner(req.user.id)
+  if (!shop) return res.status(404).json({ ok: false, message: 'ยังไม่มีร้าน' })
+  const list = ensureShopCategories(shop)
+  const category = list.find((c) => c.id === req.params.catId)
+  if (!category) return res.status(404).json({ ok: false, message: 'ไม่พบหมวดในร้าน' })
+  if (req.body?.name !== undefined) {
+    const name = String(req.body.name).trim()
+    if (!name) return res.status(400).json({ ok: false, message: 'กรอกชื่อหมวดในร้าน' })
+    if (list.some((c) => c.id !== category.id && c.name.toLowerCase() === name.toLowerCase())) {
+      return res.status(409).json({ ok: false, message: 'มีหมวดชื่อนี้อยู่แล้ว' })
+    }
+    category.name = name
+  }
+  if (req.body?.sortOrder !== undefined) category.sortOrder = Number(req.body.sortOrder) || 0
+  persist()
+  res.json({ ok: true, category, categories: list })
+})
+
+router.delete('/mine/categories/:catId', requireRole('seller', 'admin'), (req, res) => {
+  const shop = getShopByOwner(req.user.id)
+  if (!shop) return res.status(404).json({ ok: false, message: 'ยังไม่มีร้าน' })
+  const list = ensureShopCategories(shop)
+  const idx = list.findIndex((c) => c.id === req.params.catId)
+  if (idx < 0) return res.status(404).json({ ok: false, message: 'ไม่พบหมวดในร้าน' })
+  const catId = list[idx].id
+  const used = getDb().products.some(
+    (p) => p.shopId === shop.id && p.shopCategoryId === catId && p.status !== 'deleted',
+  )
+  if (used) {
+    return res.status(400).json({
+      ok: false,
+      message: 'ยังมีสินค้าอยู่ในหมวดนี้ — ย้ายหรือลบสินค้าก่อน',
+    })
+  }
+  list.splice(idx, 1)
+  persist()
+  res.json({ ok: true, categories: list })
 })
 
 router.patch('/:id/status', requireRole('admin'), (req, res) => {
@@ -102,10 +179,18 @@ router.get('/:slug', (req, res) => {
   if (!shop || shop.status !== 'active') {
     return res.status(404).json({ ok: false, message: 'ไม่พบร้านค้า' })
   }
-  const products = getDb()
-    .products.filter((p) => p.shopId === shop.id && p.status === 'active')
-    .map(enrichProduct)
-  res.json({ ok: true, shop, products })
+  ensureShopCategories(shop)
+  const { shopCategory } = req.query
+  let products = getDb().products.filter((p) => p.shopId === shop.id && p.status === 'active')
+  if (shopCategory) {
+    products = products.filter((p) => p.shopCategoryId === String(shopCategory))
+  }
+  res.json({
+    ok: true,
+    shop,
+    shopCategories: shop.shopCategories,
+    products: products.map(enrichProduct),
+  })
 })
 
 export default router

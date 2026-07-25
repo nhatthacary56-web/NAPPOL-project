@@ -11,6 +11,12 @@ export type ApiUser = {
   createdAt?: string
 }
 
+export type ShopCategory = {
+  id: string
+  name: string
+  sortOrder?: number
+}
+
 export type Shop = {
   id: string
   ownerId: string
@@ -19,6 +25,7 @@ export type Shop = {
   description: string
   location: string
   status: 'pending' | 'active' | 'rejected' | 'suspended'
+  shopCategories?: ShopCategory[]
   createdAt: string
 }
 
@@ -28,6 +35,7 @@ export type ApiProduct = {
   shopName?: string
   shopSlug?: string | null
   name: string
+  description?: string
   price: number
   originalPrice?: number
   image: string
@@ -44,11 +52,14 @@ export type ApiProduct = {
   rating: number
   reviewCount?: number
   location: string
+  /** หมวดหน้าแอป — แอดมินควบคุม */
   categorySlug: string
+  /** หมวดในร้าน — ผู้ขายสร้างเอง */
+  shopCategoryId?: string | null
   badge?: string
   flashSale?: boolean
   flashEndsAt?: string | null
-  status?: string
+  status?: 'active' | 'hidden' | 'draft' | 'deleted' | string
 }
 
 export type ApiAddress = {
