@@ -309,6 +309,13 @@ export function LoginPage() {
         <p className="auth-page__switch">
           เป็นพ่อค้าแม่ค้า? <Link to="/register?role=seller">สมัครผู้ขาย</Link>
         </p>
+        <p className="auth-page__switch">
+          แอดมินหลังบ้าน? <Link to="/admin/login">เข้าสู่ระบบแอดมิน</Link>
+          <br />
+          <span style={{ fontSize: 12, color: '#6b7280' }}>
+            admin / greatadmin หรือ admin@great.app / greatadmin
+          </span>
+        </p>
         <p className="auth-page__hint">{appContent.auth.loginHint}</p>
       </main>
     </div>

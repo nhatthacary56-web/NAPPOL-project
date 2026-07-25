@@ -367,7 +367,7 @@
   padding: 0 12px;
 }
 
-.admin-login__card button {
+.admin-login__card form button[type='submit'] {
   margin-top: 4px;
   min-height: 42px;
   border: 0;
@@ -378,12 +378,29 @@
   cursor: pointer;
 }
 
+.admin-login__demo {
+  width: 100%;
+  margin-top: 10px;
+  min-height: 38px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .admin-login__hint {
   margin-top: 14px !important;
   font-size: 12px !important;
   background: #f9fafb;
   padding: 10px;
   border-radius: 6px;
+}
+
+.admin-login__hint a {
+  color: #ee4d2d;
+  font-weight: 700;
 }
 
 @media (max-width: 900px) {
