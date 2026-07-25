@@ -1,5 +1,6 @@
 .ship-label-page {
-  --label-accent: #ee4d2d;
+  --label-pink: #e91e8c;
+  --label-line: #111;
   min-height: 100vh;
   margin: 0;
   padding: 16px;
@@ -47,7 +48,7 @@
   font-size: 14px;
   cursor: pointer;
   text-decoration: none;
-  background: var(--label-accent);
+  background: var(--label-pink);
   color: #fff;
 }
 
@@ -57,231 +58,244 @@
   border: 1px solid #d1d5db;
 }
 
+/* ===== Label card: Shopee-style boxed grid ===== */
 .ship-label {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   margin: 0 auto;
   background: #fff;
-  border: 2px solid #111;
-  padding: 14px;
+  border: 2px solid var(--label-line);
+  overflow: hidden;
 }
 
-.ship-label__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid var(--label-accent);
+.ship-label__row {
+  display: grid;
+  border-bottom: 2px solid var(--label-line);
 }
 
-.ship-label__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.ship-label__row:last-child {
+  border-bottom: none;
+}
+
+.ship-label__cell {
+  padding: 8px;
   min-width: 0;
 }
 
-.ship-label__mark {
-  color: var(--label-accent);
+.ship-label__row--head {
+  grid-template-columns: 1fr 1.15fr;
+}
+
+.ship-label__brand-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-right: 2px solid var(--label-line);
+}
+
+.ship-label__logo {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 10px;
   flex: 0 0 auto;
+  border: 1px solid #f5b6d8;
+}
+
+.ship-label__brand-text {
   display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
-.ship-label__brand h1 {
-  margin: 0;
+.ship-label__brand-text strong {
   font-size: 22px;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  color: var(--label-accent);
-}
-
-.ship-label__brand p {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: #6b7280;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--label-pink);
 }
 
 .ship-label__carrier {
-  text-align: right;
-  flex: 0 0 auto;
-}
-
-.ship-label__carrier-name {
-  display: block;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
+  color: #111;
 }
 
-.ship-label__pieces {
-  display: inline-block;
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border: 1px solid #111;
-}
-
-.ship-label__barcode-wrap {
-  padding: 12px 0 8px;
+.ship-label__track-cell {
   display: grid;
   place-items: center;
-  border-bottom: 1px solid #d1d5db;
+  padding: 6px 8px 4px;
 }
 
-.ship-label__barcode {
+.ship-label__barcode,
+.ship-label__order-barcode {
   max-width: 100%;
   height: auto;
 }
 
 .ship-label__no-track {
-  margin: 8px 0;
+  margin: 0;
+  font-size: 12px;
   color: #b45309;
-  font-size: 13px;
   text-align: center;
 }
 
-.ship-label__grid {
+.ship-label__row--mid {
+  grid-template-columns: 1.45fr 0.7fr;
+}
+
+.ship-label__addr {
+  border-right: 2px solid var(--label-line);
+  padding: 0;
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 0;
-  border-bottom: 1px solid #d1d5db;
 }
 
-.ship-label__block {
-  padding: 10px 10px 10px 0;
-  border-right: 1px solid #d1d5db;
+.ship-label__from,
+.ship-label__to {
+  padding: 8px;
 }
 
-.ship-label__block--to {
-  grid-column: 1 / -1;
-  padding: 10px 0 0;
-  border-right: none;
-  border-top: 1px solid #d1d5db;
+.ship-label__from {
+  border-bottom: 2px solid var(--label-line);
 }
 
-.ship-label__block h2 {
-  margin: 0 0 6px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--label-accent);
-  text-transform: uppercase;
+.ship-label__kicker {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #111;
+  margin-bottom: 4px;
 }
 
-.ship-label__block p {
-  margin: 0 0 3px;
+.ship-label__addr p {
+  margin: 0 0 2px;
   font-size: 12px;
   line-height: 1.35;
   word-break: break-word;
 }
 
 .ship-label__name {
-  font-size: 15px !important;
+  font-size: 14px !important;
   font-weight: 800;
 }
 
-.ship-label__meta {
+.ship-label__side {
   display: grid;
-  gap: 8px;
-  padding: 10px 0 10px 10px;
-  align-content: start;
+  grid-template-rows: auto 1fr auto;
 }
 
-.ship-label__meta > div {
+.ship-label__side-box {
   display: grid;
-  gap: 2px;
+  place-items: center;
+  text-align: center;
+  font-weight: 800;
+  border-bottom: 2px solid var(--label-line);
+  padding: 8px 6px;
 }
 
-.ship-label__meta span {
-  font-size: 10px;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.ship-label__side-box:last-child {
+  border-bottom: none;
 }
 
-.ship-label__meta strong {
-  font-size: 12px;
-  word-break: break-all;
-}
-
-.ship-label__cod {
-  background: var(--label-accent);
+.ship-label__side-box--dark {
+  background: #111;
   color: #fff;
-  border-radius: 6px;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  font-size: 12px;
 }
 
-.ship-label__cod span,
-.ship-label__paid span {
-  color: inherit;
-  font-size: 12px;
+.ship-label__side-box--big {
+  background: #e5e7eb;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.ship-label__side-box--cod {
+  background: var(--label-pink);
+  color: #fff;
+}
+
+.ship-label__side-box span {
+  font-size: 10px;
   font-weight: 700;
 }
 
-.ship-label__cod strong {
-  font-size: 22px;
-  letter-spacing: -0.02em;
+.ship-label__side-box strong {
+  font-size: 15px;
+  line-height: 1.1;
 }
 
-.ship-label__paid {
-  border: 1px dashed #9ca3af;
-  border-radius: 6px;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: #374151;
+.ship-label__row--order {
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+.ship-label__order-meta {
+  border-right: 2px solid var(--label-line);
+  display: grid;
+  align-content: center;
+  gap: 4px;
+}
+
+.ship-label__order-no {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.ship-label__district {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 4px;
+  background: #f3f4f6;
+}
+
+.ship-label__district strong {
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.ship-label__district span {
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .ship-label__items {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 4px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-.ship-label__items th {
-  text-align: left;
-  background: color-mix(in srgb, var(--label-accent) 12%, #fff);
-  color: #111;
-  padding: 6px 4px;
-  border-bottom: 1px solid #d1d5db;
-}
-
+.ship-label__items th,
 .ship-label__items td {
-  padding: 6px 4px;
-  border-bottom: 1px solid #eceff3;
+  border: 1px solid var(--label-line);
+  padding: 6px 5px;
   vertical-align: top;
+  text-align: left;
 }
 
-.ship-label__items th:first-child,
-.ship-label__items td:first-child,
-.ship-label__items th:last-child,
-.ship-label__items td:last-child {
-  width: 40px;
+.ship-label__items thead th {
+  background: #fce7f3;
+  font-weight: 800;
+}
+
+.ship-label__items .col-no,
+.ship-label__items .col-qty {
+  width: 48px;
   text-align: center;
 }
 
-.ship-label__foot {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 2px solid var(--label-accent);
-  text-align: center;
-  font-size: 12px;
+.ship-label__items-foot td {
   font-weight: 700;
-  color: var(--label-accent);
+  background: #fafafa;
 }
 
 @media print {
   @page {
     size: 100mm 150mm;
-    margin: 4mm;
+    margin: 3mm;
   }
 
   .no-print {
@@ -297,7 +311,21 @@
   .ship-label {
     max-width: none;
     width: 100%;
-    border-width: 1.5px;
+    border-width: 2px;
     page-break-inside: avoid;
+  }
+
+  .ship-label__logo {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .ship-label__side-box--dark,
+  .ship-label__side-box--cod,
+  .ship-label__side-box--big,
+  .ship-label__items thead th,
+  .ship-label__district {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 }
