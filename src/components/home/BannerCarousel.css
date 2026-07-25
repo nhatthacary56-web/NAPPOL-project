@@ -1,40 +1,39 @@
 .banner-carousel {
-  padding: 10px 12px 0;
+  position: relative;
+  padding: 0 0 14px;
   background: var(--brand-grad);
 }
 
-.banner-carousel__track {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 88%;
-  gap: 10px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding-bottom: 12px;
-  scrollbar-width: none;
+.banner-carousel__viewport {
+  width: 100%;
+  overflow: hidden;
 }
 
-.banner-carousel__track::-webkit-scrollbar {
-  display: none;
+.banner-carousel__track {
+  display: flex;
+  width: 100%;
+  transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
 }
 
 .banner-card {
-  scroll-snap-align: start;
-  min-height: 132px;
+  flex: 0 0 100%;
+  width: 100%;
+  min-height: 168px;
+  height: clamp(168px, 42vw, 220px);
   padding: 18px 16px;
-  border-radius: var(--radius-md, 12px);
+  border-radius: 0;
   color: #fff;
   position: relative;
   overflow: hidden;
   display: block;
   text-decoration: none;
+  box-sizing: border-box;
 }
 
 .banner-card--photo {
   padding: 0;
-  min-height: 148px;
-  aspect-ratio: 2.4 / 1;
-  background: #1f2937;
+  background: #111;
 }
 
 .banner-card__img {
@@ -44,14 +43,20 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transform: scale(1.02);
 }
 
 .banner-card--photo::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 35%, rgba(0, 0, 0, 0.55) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.02) 40%,
+    rgba(0, 0, 0, 0.42) 100%
+  );
   z-index: 1;
+  pointer-events: none;
 }
 
 .banner-card:not(.banner-card--photo)::after {
@@ -104,7 +109,7 @@
   flex-direction: column;
   justify-content: flex-end;
   gap: 4px;
-  padding: 14px 14px 12px;
+  padding: 16px 16px 18px;
   box-sizing: border-box;
 }
 
@@ -118,14 +123,14 @@
   font-size: 20px;
   font-weight: 800;
   line-height: 1.2;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
 }
 
 .banner-card__subtitle {
   margin: 0;
   font-size: 12px;
   opacity: 0.95;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
 }
 
 .banner-card__cta {
@@ -140,4 +145,36 @@
   color: var(--brand);
   font-size: 12px;
   font-weight: 700;
+}
+
+.banner-carousel__dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.banner-carousel__dots button {
+  pointer-events: auto;
+  appearance: none;
+  border: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition:
+    width 0.25s ease,
+    background 0.25s ease;
+}
+
+.banner-carousel__dots button.is-active {
+  width: 18px;
+  background: #fff;
 }
