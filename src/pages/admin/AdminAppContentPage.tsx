@@ -14,7 +14,7 @@ export function AdminAppContentPage() {
   const [freeShippingMin, setFreeShippingMin] = useState(199)
   const [shippingFee, setShippingFee] = useState(40)
   const [section, setSection] = useState<
-    'shipping' | 'home' | 'mall' | 'live' | 'copy' | 'auth' | 'help'
+    'shipping' | 'home' | 'mall' | 'live' | 'copy' | 'auth' | 'help' | 'legal'
   >('shipping')
 
   useEffect(() => {
@@ -23,6 +23,10 @@ export function AdminAppContentPage() {
         setContent({
           ...defaultAppContent,
           ...c.appContent,
+          legal: {
+            ...defaultAppContent.legal,
+            ...c.appContent.legal,
+          },
           help: {
             ...defaultAppContent.help,
             ...c.appContent.help,
@@ -67,6 +71,7 @@ export function AdminAppContentPage() {
     { id: 'copy' as const, label: '5. ข้อความ', hint: 'ค้นหา / ค่าส่งสินค้า / CTA' },
     { id: 'auth' as const, label: '6. ล็อกอิน', hint: 'ข้อความหน้าเข้าสู่ระบบ' },
     { id: 'help' as const, label: '7. ช่วยเหลือ', hint: 'LINE / ช่องทาง + ข้อความฟอร์ม' },
+    { id: 'legal' as const, label: '8. นโยบาย', hint: 'privacy / terms / คืนสินค้า' },
   ]
 
   return (
@@ -122,7 +127,10 @@ export function AdminAppContentPage() {
 
       {section === 'home' ? (
         <form className="admin-card admin-form" onSubmit={saveContent}>
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>ทางลัด 4 ช่องใต้แบนเนอร์</h2>
+          <h2 style={{ marginTop: 0, fontSize: 16 }}>ทางลัดใต้แบนเนอร์</h2>
+          <p style={{ color: '#6b7280', fontSize: 13, marginTop: 0 }}>
+            เพิ่ม / ลบ / เรียงได้ — ช่องที่ปิดจะไม่โชว์บนหน้าแรก
+          </p>
           {content.homeShortcuts.map((item, idx) => (
             <div key={item.id} className="admin-form-grid" style={{ marginBottom: 8 }}>
               <label>
@@ -172,8 +180,56 @@ export function AdminAppContentPage() {
                   <option value="0">ปิด</option>
                 </select>
               </label>
+              <label>
+                ลำดับ
+                <input
+                  type="number"
+                  value={item.sort ?? idx + 1}
+                  onChange={(e) => {
+                    const next = [...content.homeShortcuts]
+                    next[idx] = { ...item, sort: Number(e.target.value) || 0 }
+                    setContent({ ...content, homeShortcuts: next })
+                  }}
+                />
+              </label>
+              <div style={{ display: 'flex', alignItems: 'end' }}>
+                <button
+                  type="button"
+                  className="admin-btn ghost"
+                  onClick={() => {
+                    const next = content.homeShortcuts.filter((_, i) => i !== idx)
+                    setContent({ ...content, homeShortcuts: next })
+                  }}
+                >
+                  ลบช่องนี้
+                </button>
+              </div>
             </div>
           ))}
+          <button
+            type="button"
+            className="admin-btn ghost"
+            style={{ marginBottom: 16 }}
+            onClick={() => {
+              const id = `s_${Date.now()}`
+              setContent({
+                ...content,
+                homeShortcuts: [
+                  ...content.homeShortcuts,
+                  {
+                    id,
+                    icon: '✨',
+                    label: 'ทางลัดใหม่',
+                    link: '/mall',
+                    active: true,
+                    sort: content.homeShortcuts.length + 1,
+                  },
+                ],
+              })
+            }}
+          >
+            + เพิ่มทางลัด
+          </button>
 
           <h2 style={{ fontSize: 16 }}>Flash Sale / สินค้าแนะนำ</h2>
           <div className="admin-form-grid">
@@ -428,7 +484,7 @@ export function AdminAppContentPage() {
         <form className="admin-card admin-form" onSubmit={saveContent}>
           <h2 style={{ marginTop: 0, fontSize: 16 }}>หน้าเข้าสู่ระบบ / สมัคร</h2>
           <label>
-            คำใบ้บัญชีทดลอง
+            คำใบ้ใต้ฟอร์มล็อกอิน (อย่าใส่รหัสผ่านจริง)
             <input
               value={content.auth.loginHint}
               onChange={(e) =>
@@ -671,6 +727,70 @@ export function AdminAppContentPage() {
           </button>
           <button type="submit" className="admin-btn" style={{ marginLeft: 8 }}>
             บันทึกช่วยเหลือ
+          </button>
+        </form>
+      ) : null}
+
+      {section === 'legal' ? (
+        <form className="admin-card admin-form" onSubmit={saveContent}>
+          <h2 style={{ marginTop: 0, fontSize: 16 }}>นโยบายที่ลูกค้าอ่านได้</h2>
+          <p style={{ color: '#6b7280', fontSize: 13, marginTop: 0 }}>
+            หน้า <Link to="/privacy">/privacy</Link> · <Link to="/terms">/terms</Link> ·{' '}
+            <Link to="/returns-policy">/returns-policy</Link>
+          </p>
+          <label>
+            นโยบายความเป็นส่วนตัว
+            <textarea
+              rows={5}
+              value={content.legal?.privacy || ''}
+              onChange={(e) =>
+                setContent({
+                  ...content,
+                  legal: {
+                    privacy: e.target.value,
+                    terms: content.legal?.terms || '',
+                    returnPolicy: content.legal?.returnPolicy || '',
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            ข้อกำหนดการใช้งาน
+            <textarea
+              rows={5}
+              value={content.legal?.terms || ''}
+              onChange={(e) =>
+                setContent({
+                  ...content,
+                  legal: {
+                    privacy: content.legal?.privacy || '',
+                    terms: e.target.value,
+                    returnPolicy: content.legal?.returnPolicy || '',
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            นโยบายคืนสินค้า
+            <textarea
+              rows={5}
+              value={content.legal?.returnPolicy || ''}
+              onChange={(e) =>
+                setContent({
+                  ...content,
+                  legal: {
+                    privacy: content.legal?.privacy || '',
+                    terms: content.legal?.terms || '',
+                    returnPolicy: e.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+          <button type="submit" className="admin-btn">
+            บันทึกนโยบาย
           </button>
         </form>
       ) : null}

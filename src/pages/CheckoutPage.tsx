@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { paymentApi } from '../api'
 import { PageHeader } from '../components/layout/PageHeader'
 import { formatPrice } from '../data/catalog'
 import { cartLineKey } from '../api/types'
@@ -9,6 +10,12 @@ import { useToast } from '../store/ToastContext'
 import type { ApiOrder } from '../api/types'
 import './CheckoutPage.css'
 
+type PayMethod = {
+  id: ApiOrder['paymentMethod']
+  name: string
+  description: string
+}
+
 export function CheckoutPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -17,12 +24,33 @@ export function CheckoutPage() {
 
   const selectedItems = cart.filter((item) => item.selected)
   const [addressId, setAddressId] = useState(defaultAddress?.id ?? '')
+  const [paymentMethods, setPaymentMethods] = useState<PayMethod[]>([])
   const [paymentMethod, setPaymentMethod] = useState<ApiOrder['paymentMethod']>('cod')
   const [voucherCode, setVoucherCode] = useState('')
 
   useEffect(() => {
     if (!addressId && defaultAddress) setAddressId(defaultAddress.id)
   }, [addressId, defaultAddress])
+
+  useEffect(() => {
+    void paymentApi
+      .methods()
+      .then((res) => {
+        const methods = (res.methods || []) as PayMethod[]
+        setPaymentMethods(methods)
+        if (methods.length && !methods.some((m) => m.id === paymentMethod)) {
+          setPaymentMethod(methods[0].id)
+        }
+      })
+      .catch(() => {
+        setPaymentMethods([
+          { id: 'cod', name: 'เก็บเงินปลายทาง', description: '' },
+          { id: 'transfer', name: 'โอนผ่านธนาคาร', description: '' },
+          { id: 'card', name: 'บัตรเครดิต/เดบิต', description: '' },
+        ])
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount
+  }, [])
 
   const lines = useMemo(
     () =>
@@ -160,23 +188,28 @@ export function CheckoutPage() {
 
         <section className="checkout-card">
           <h2>วิธีชำระเงิน</h2>
-          {(
-            [
-              ['cod', 'เก็บเงินปลายทาง'],
-              ['transfer', 'โอนผ่านธนาคาร'],
-              ['card', 'บัตรเครดิต/เดบิต'],
-            ] as const
-          ).map(([value, label]) => (
-            <label key={value} className="checkout-pay">
-              <input
-                type="radio"
-                name="payment"
-                checked={paymentMethod === value}
-                onChange={() => setPaymentMethod(value)}
-              />
-              {label}
-            </label>
-          ))}
+          {paymentMethods.length === 0 ? (
+            <p className="checkout-card__hint">ยังไม่มีวิธีชำระเงินที่เปิดใช้งาน</p>
+          ) : (
+            paymentMethods.map((method) => (
+              <label key={method.id} className="checkout-pay">
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === method.id}
+                  onChange={() => setPaymentMethod(method.id)}
+                />
+                <span>
+                  {method.name}
+                  {method.description ? (
+                    <em style={{ display: 'block', fontSize: 12, color: '#6b7280', fontStyle: 'normal' }}>
+                      {method.description}
+                    </em>
+                  ) : null}
+                </span>
+              </label>
+            ))
+          )}
         </section>
 
         <section className="checkout-card">

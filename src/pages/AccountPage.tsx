@@ -22,6 +22,9 @@ export function AccountPage() {
     { label: 'ที่อยู่จัดส่ง', to: user ? '/addresses' : '/login' },
     { label: 'ตั้งค่าบัญชี', to: user ? '/settings' : '/login' },
     { label: 'ศูนย์ความช่วยเหลือ', to: '/help' },
+    { label: 'นโยบายความเป็นส่วนตัว', to: '/privacy' },
+    { label: 'ข้อกำหนดการใช้งาน', to: '/terms' },
+    { label: 'นโยบายคืนสินค้า', to: '/returns-policy' },
     ...(user?.role === 'seller' || user?.role === 'admin'
       ? [{ label: shop ? 'แดชบอร์ดร้านค้า' : 'เปิดร้านขายของ', to: '/seller' }]
       : [{ label: 'สมัครเป็นผู้ขาย', to: '/register?role=seller' }]),
@@ -32,7 +35,11 @@ export function AccountPage() {
     <main className="page account-page">
       <header className="account-page__hero">
         <div className="account-page__avatar" aria-hidden="true">
-          {(user?.name ?? brand.logoText).slice(0, 1).toUpperCase()}
+          {brand.logoUrl ? (
+            <img src={brand.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            (user?.name ?? brand.logoText).slice(0, 1).toUpperCase()
+          )}
         </div>
         <div>
           <p className="account-page__brand">{brand.logoText}</p>

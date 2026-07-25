@@ -217,6 +217,45 @@ export function HelpCenterPage() {
             </ul>
           )}
         </section>
+
+        <section className="help-card">
+          <h2>นโยบาย</h2>
+          <ul className="help-channel-list">
+            <li>
+              <Link to="/privacy" className="help-channel">
+                <span className="help-channel__icon" aria-hidden="true">
+                  🔒
+                </span>
+                <span>
+                  <strong>นโยบายความเป็นส่วนตัว</strong>
+                  <em>/privacy</em>
+                </span>
+              </Link>
+            </li>
+            <li>
+              <Link to="/terms" className="help-channel">
+                <span className="help-channel__icon" aria-hidden="true">
+                  📄
+                </span>
+                <span>
+                  <strong>ข้อกำหนดการใช้งาน</strong>
+                  <em>/terms</em>
+                </span>
+              </Link>
+            </li>
+            <li>
+              <Link to="/returns-policy" className="help-channel">
+                <span className="help-channel__icon" aria-hidden="true">
+                  ↩️
+                </span>
+                <span>
+                  <strong>นโยบายคืนสินค้า</strong>
+                  <em>/returns-policy</em>
+                </span>
+              </Link>
+            </li>
+          </ul>
+        </section>
       </main>
     </div>
   )

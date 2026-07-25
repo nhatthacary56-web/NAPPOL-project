@@ -23,6 +23,7 @@ import paymentRoutes from './routes/payments.js'
 import returnRoutes from './routes/returns.js'
 import helpRoutes from './routes/help.js'
 import feedRoutes from './routes/feed.js'
+import cartRoutes from './routes/cart.js'
 
 dotenv.config()
 
@@ -87,6 +88,7 @@ app.use('/api/payments', paymentRoutes)
 app.use('/api/returns', returnRoutes)
 app.use('/api/help', helpRoutes)
 app.use('/api/feed', feedRoutes)
+app.use('/api/cart', cartRoutes)
 app.use('/api', metaRoutes)
 
 if (isProd) {

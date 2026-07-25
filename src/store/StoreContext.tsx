@@ -4,12 +4,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import {
   addressApi,
   authApi,
+  cartApi,
   chatApi,
   metaApi,
   notificationApi,
@@ -144,6 +146,29 @@ const defaultBrand: Brand = {
   secondaryColor: '#ff7337',
   accentColor: '#ffb000',
   logoText: 'Great App',
+  logoUrl: '',
+}
+
+function mergeCartItems(local: CartItem[], remote: CartItem[]): CartItem[] {
+  const map = new Map<string, CartItem>()
+  for (const item of remote) {
+    map.set(cartLineKey(item.productId, item.variantId), { ...item })
+  }
+  for (const item of local) {
+    const key = cartLineKey(item.productId, item.variantId)
+    const existing = map.get(key)
+    if (existing) {
+      map.set(key, {
+        ...existing,
+        qty: Math.max(existing.qty, item.qty),
+        selected: Boolean(existing.selected || item.selected),
+        variantName: existing.variantName || item.variantName || null,
+      })
+    } else {
+      map.set(key, { ...item })
+    }
+  }
+  return [...map.values()]
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -161,8 +186,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<ApiNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [chatUnread, setChatUnread] = useState(0)
+  const cartSyncReady = useRef(false)
+  const cartSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => saveJson(CART_KEY, cart), [cart])
+
+  useEffect(() => {
+    if (!user || !cartSyncReady.current) return
+    if (cartSaveTimer.current) clearTimeout(cartSaveTimer.current)
+    cartSaveTimer.current = setTimeout(() => {
+      void cartApi.put(cart).catch(() => {})
+    }, 400)
+    return () => {
+      if (cartSaveTimer.current) clearTimeout(cartSaveTimer.current)
+    }
+  }, [cart, user])
 
   useEffect(() => {
     const primary = brand.primaryColor || '#ee4d2d'
@@ -327,7 +365,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       void refreshNotifications()
       void refreshChatUnread()
       void refreshClaimedVouchers()
+      cartSyncReady.current = false
+      void cartApi
+        .get()
+        .then((res) => {
+          const local = loadJson<CartItem[]>(CART_KEY, [])
+          const merged = mergeCartItems(local, res.items || [])
+          setCart(merged)
+          saveJson(CART_KEY, merged)
+          return cartApi.put(merged)
+        })
+        .catch(() => {})
+        .finally(() => {
+          cartSyncReady.current = true
+        })
     } else {
+      cartSyncReady.current = false
       setWishlist([])
       setAddresses([])
       setOrders([])

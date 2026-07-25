@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { uploadApi } from '../../api'
 import type { Brand } from '../../api/types'
 import { useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
@@ -37,13 +38,16 @@ export function AdminBrandPage() {
     ...brand,
     secondaryColor: brand.secondaryColor || '#ff7337',
     accentColor: brand.accentColor || '#ffb000',
+    logoUrl: brand.logoUrl || '',
   })
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     setForm({
       ...brand,
       secondaryColor: brand.secondaryColor || '#ff7337',
       accentColor: brand.accentColor || '#ffb000',
+      logoUrl: brand.logoUrl || '',
     })
   }, [brand])
 
@@ -54,6 +58,20 @@ export function AdminBrandPage() {
       toast('บันทึกแบรนด์และสีแอปแล้ว')
     } catch (error) {
       toast(error instanceof Error ? error.message : 'บันทึกไม่สำเร็จ')
+    }
+  }
+
+  async function onLogoPick(file?: File | null) {
+    if (!file) return
+    setUploading(true)
+    try {
+      const res = await uploadApi.image(file)
+      setForm((p) => ({ ...p, logoUrl: res.url }))
+      toast('อัปโหลดโลโก้แล้ว — กดบันทึกเพื่อใช้จริง')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'อัปโหลดไม่สำเร็จ')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -117,6 +135,45 @@ export function AdminBrandPage() {
                 value={form.tagline}
                 onChange={(e) => setForm((p) => ({ ...p, tagline: e.target.value }))}
               />
+            </label>
+            <label style={{ gridColumn: '1 / -1' }}>
+              โลโก้รูป (ใช้บนใบปะหน้า / บัญชี)
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 6 }}>
+                {form.logoUrl ? (
+                  <img
+                    src={form.logoUrl}
+                    alt="โลโก้"
+                    style={{
+                      width: 64,
+                      height: 64,
+                      objectFit: 'contain',
+                      borderRadius: 8,
+                      border: '1px solid #e5e7eb',
+                      background: '#fff',
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>ยังไม่มีโลโก้</span>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    void onLogoPick(e.target.files?.[0])
+                    e.currentTarget.value = ''
+                  }}
+                />
+                {form.logoUrl ? (
+                  <button
+                    type="button"
+                    className="admin-btn ghost"
+                    onClick={() => setForm((p) => ({ ...p, logoUrl: '' }))}
+                  >
+                    ลบโลโก้
+                  </button>
+                ) : null}
+              </div>
             </label>
             <label>
               สีหลัก

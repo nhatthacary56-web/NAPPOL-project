@@ -7,8 +7,7 @@ import { formatPrice } from '../data/catalog'
 import { useStore } from '../store/StoreContext'
 import './ShippingLabelPage.css'
 
-const BRAND_NAME = 'DeeJa'
-const LOGO_SRC = '/deeja-logo.png'
+const FALLBACK_LOGO = '/deeja-logo.png'
 
 function formatAddress(order: ApiOrder) {
   const a = order.address
@@ -19,7 +18,9 @@ export function ShippingLabelPage() {
   const { id = '' } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { shop, user, isAdmin } = useStore()
+  const { shop, user, isAdmin, brand } = useStore()
+  const brandName = brand.name || brand.logoText || 'DeeJa'
+  const logoSrc = brand.logoUrl?.trim() || FALLBACK_LOGO
   const [order, setOrder] = useState<ApiOrder | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -146,9 +147,9 @@ export function ShippingLabelPage() {
         {/* Row 1: brand + tracking barcode */}
         <div className="ship-label__row ship-label__row--head">
           <div className="ship-label__cell ship-label__brand-cell">
-            <img className="ship-label__logo" src={LOGO_SRC} alt={BRAND_NAME} />
+            <img className="ship-label__logo" src={logoSrc} alt={brandName} />
             <div className="ship-label__brand-text">
-              <strong>{BRAND_NAME}</strong>
+              <strong>{brandName}</strong>
               <span className="ship-label__carrier">{order.carrier || 'ขนส่ง'}</span>
             </div>
           </div>

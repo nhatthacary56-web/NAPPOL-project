@@ -42,6 +42,8 @@ import { AdminFlashPage } from './pages/admin/AdminFlashPage'
 import { AdminAppContentPage } from './pages/admin/AdminAppContentPage'
 import { AdminHelpPage } from './pages/admin/AdminHelpPage'
 import { AdminFeedPage } from './pages/admin/AdminFeedPage'
+import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage'
+import { LegalPage } from './pages/LegalPage'
 import { SellerShell } from './pages/seller/SellerShell'
 import { SellerDashboardPage } from './pages/seller/SellerDashboardPage'
 import { SellerProductsPage } from './pages/seller/SellerProductsPage'
@@ -72,6 +74,7 @@ export default function App() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="vouchers" element={<AdminVouchersPage />} />
         <Route path="wallet" element={<AdminWalletPage />} />
+        <Route path="payments" element={<AdminPaymentsPage />} />
         <Route path="reports" element={<AdminReportsPage />} />
         <Route path="returns" element={<AdminReturnsPage />} />
         <Route path="app-content" element={<AdminAppContentPage />} />
@@ -112,6 +115,9 @@ export default function App() {
       <Route path="wishlist" element={<WishlistPage />} />
       <Route path="vouchers" element={<VouchersPage />} />
       <Route path="help" element={<HelpCenterPage />} />
+      <Route path="privacy" element={<LegalPage kind="privacy" />} />
+      <Route path="terms" element={<LegalPage kind="terms" />} />
+      <Route path="returns-policy" element={<LegalPage kind="returnPolicy" />} />
 
       <Route
         path="checkout"

@@ -54,13 +54,15 @@ router.get('/brand', (_req, res) => {
 router.put('/brand', requireRole('admin'), (req, res) => {
   const db = getDb()
   if (!db.brand) db.brand = {}
-  const { name, tagline, primaryColor, secondaryColor, accentColor, logoText } = req.body ?? {}
+  const { name, tagline, primaryColor, secondaryColor, accentColor, logoText, logoUrl } =
+    req.body ?? {}
   if (name) db.brand.name = String(name).trim()
   if (tagline !== undefined) db.brand.tagline = String(tagline).trim()
   if (primaryColor) db.brand.primaryColor = String(primaryColor).trim()
   if (secondaryColor) db.brand.secondaryColor = String(secondaryColor).trim()
   if (accentColor) db.brand.accentColor = String(accentColor).trim()
   if (logoText) db.brand.logoText = String(logoText).trim()
+  if (logoUrl !== undefined) db.brand.logoUrl = String(logoUrl || '').trim()
   persist()
   res.json({ ok: true, brand: db.brand })
 })
@@ -254,6 +256,9 @@ router.get('/storefront-settings', (_req, res) => {
       promptPayPhone: s.promptPayPhone,
       bankAccount: s.bankAccount,
       commissionRate: s.commissionRate,
+      paymentMethods: s.paymentMethods || { cod: true, transfer: true, card: true },
+      carriers: Array.isArray(s.carriers) ? s.carriers : [],
+      defaultCarrier: s.defaultCarrier || 'Kerry Express',
     },
   })
 })
@@ -285,9 +290,17 @@ function defaultAppContentSafe() {
     search: { placeholder: 'ค้นหาสินค้า แบรนด์ และอื่นๆ', popularTitle: 'สินค้ายอดนิยม' },
     productShippingTemplate: 'ส่งจาก {location} · ส่งฟรีเมื่อครบ ฿{freeShippingMin}',
     auth: {
-      loginHint: 'ทดลอง: buyer@great.app / buyer123 · seller@great.app / seller123',
+      loginHint: 'หากเข้าสู่ระบบไม่ได้ ติดต่อศูนย์ความช่วยเหลือ',
       buyerPitch: 'สมัครเพื่อสั่งซื้อและติดตามออเดอร์',
       sellerPitch: 'เปิดร้านขายของบนแพลตฟอร์ม',
+    },
+    legal: {
+      privacy:
+        'เราเก็บข้อมูลที่จำเป็นต่อการสั่งซื้อและการให้บริการเท่านั้น และไม่ขายข้อมูลส่วนบุคคลแก่บุคคลภายนอกโดยไม่ได้รับความยินยอม',
+      terms:
+        'การใช้แอปถือว่ายอมรับเงื่อนไขการให้บริการของแพลตฟอร์ม รวมถึงการสั่งซื้อ การชำระเงิน และการจัดส่งตามที่ระบุในแต่ละคำสั่งซื้อ',
+      returnPolicy:
+        'ลูกค้าสามารถขอคืนสินค้าได้ตามเงื่อนไขของแต่ละร้านภายในระยะเวลาที่กำหนด โดยส่งคำขอผ่านหน้าคำสั่งซื้อ',
     },
     help: {
       title: 'ศูนย์ความช่วยเหลือ',

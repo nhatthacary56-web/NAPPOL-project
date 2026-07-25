@@ -23,7 +23,8 @@ const navGroups = [
     title: 'การเงิน',
     hint: 'รายได้แพลตฟอร์มและผู้ขาย',
     links: [
-      { to: '/admin/wallet', label: 'กระเป๋าเงิน', desc: 'อนุมัติถอน + PromptPay' },
+      { to: '/admin/wallet', label: 'กระเป๋าเงิน', desc: 'อนุมัติถอน + ค่าคอม' },
+      { to: '/admin/payments', label: 'ชำระเงิน/ขนส่ง', desc: 'เปิด-ปิดวิธีจ่าย · บัญชี · ขนส่ง' },
       { to: '/admin/reports', label: 'รายงานค่าคอม', desc: 'fee / net ต่อออเดอร์' },
       { to: '/admin/vouchers', label: 'คูปอง', desc: 'สร้างโค้ดส่วนลด' },
     ],
@@ -35,13 +36,13 @@ const navGroups = [
       {
         to: '/admin/app-content',
         label: 'เนื้อหาแอป',
-        desc: 'ทางลัด · Mall · ฟีด · ค่าส่ง · ช่วยเหลือ · ข้อความ',
+        desc: 'ทางลัด · Mall · นโยบาย · ค่าส่ง · ช่วยเหลือ',
       },
       { to: '/admin/feed', label: 'ฟีดโพสต์', desc: 'อนุมัติ / ซ่อนโพสต์รูป' },
       { to: '/admin/banners', label: 'แบนเนอร์', desc: 'สไลด์หน้าแรก' },
       { to: '/admin/categories', label: 'หมวดหมู่', desc: 'ไอคอนและชื่อหมวด' },
       { to: '/admin/flash', label: 'Flash Sale', desc: 'ตั้งสินค้าและเวลาหมด' },
-      { to: '/admin/brand', label: 'แบรนด์', desc: 'ชื่อ สี สโลแกนแอป' },
+      { to: '/admin/brand', label: 'แบรนด์', desc: 'โลโก้ · ชื่อ · สีแอป' },
     ],
   },
   {

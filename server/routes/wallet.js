@@ -143,13 +143,17 @@ router.get('/settings', requireAuth, (_req, res) => {
       bankAccount: db.settings.bankAccount,
       freeShippingMin: db.settings.freeShippingMin ?? 199,
       shippingFee: db.settings.shippingFee ?? 40,
+      paymentMethods: db.settings.paymentMethods || { cod: true, transfer: true, card: true },
+      carriers: Array.isArray(db.settings.carriers) ? db.settings.carriers : [],
+      defaultCarrier: db.settings.defaultCarrier || 'Kerry Express',
     },
   })
 })
 
 router.put('/settings', requireRole('admin'), (req, res) => {
   const db = getDb()
-  const { commissionRate, promptPayPhone, bankAccount } = req.body ?? {}
+  const { commissionRate, promptPayPhone, bankAccount, paymentMethods, carriers, defaultCarrier } =
+    req.body ?? {}
   if (commissionRate !== undefined) {
     const rate = Number(commissionRate)
     if (Number.isNaN(rate) || rate < 0 || rate > 0.3) {
@@ -173,6 +177,35 @@ router.put('/settings', requireRole('admin'), (req, res) => {
       accountNumber: String(
         bankAccount.accountNumber || db.settings.bankAccount.accountNumber,
       ).trim(),
+    }
+  }
+  if (paymentMethods && typeof paymentMethods === 'object') {
+    const next = {
+      cod: paymentMethods.cod !== false,
+      transfer: paymentMethods.transfer !== false,
+      card: paymentMethods.card !== false,
+    }
+    if (!next.cod && !next.transfer && !next.card) {
+      return res.status(400).json({ ok: false, message: 'ต้องเปิดอย่างน้อย 1 วิธีชำระเงิน' })
+    }
+    db.settings.paymentMethods = next
+  }
+  if (Array.isArray(carriers)) {
+    const list = carriers.map((c) => String(c || '').trim()).filter(Boolean)
+    if (list.length === 0) {
+      return res.status(400).json({ ok: false, message: 'ต้องมีอย่างน้อย 1 ขนส่ง' })
+    }
+    db.settings.carriers = list
+    if (!list.includes(db.settings.defaultCarrier)) {
+      db.settings.defaultCarrier = list[0]
+    }
+  }
+  if (defaultCarrier !== undefined) {
+    const name = String(defaultCarrier).trim()
+    const list = db.settings.carriers || []
+    if (name && list.includes(name)) db.settings.defaultCarrier = name
+    else if (name) {
+      return res.status(400).json({ ok: false, message: 'defaultCarrier ต้องอยู่ในรายการ carriers' })
     }
   }
   persist()

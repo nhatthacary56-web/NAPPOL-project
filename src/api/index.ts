@@ -298,6 +298,15 @@ export const paymentApi = {
     }>('/payments/methods'),
 }
 
+export const cartApi = {
+  get: () => api<{ ok: true; items: import('./types').CartItem[] }>('/cart'),
+  put: (items: import('./types').CartItem[]) =>
+    api<{ ok: true; items: import('./types').CartItem[] }>('/cart', {
+      method: 'PUT',
+      json: { items },
+    }),
+}
+
 export const uploadApi = {
   image: async (file: File) => {
     const form = new FormData()
@@ -427,7 +436,14 @@ export const metaApi = {
       ok: true
       settings: Pick<
         PlatformSettings,
-        'freeShippingMin' | 'shippingFee' | 'promptPayPhone' | 'bankAccount' | 'commissionRate'
+        | 'freeShippingMin'
+        | 'shippingFee'
+        | 'promptPayPhone'
+        | 'bankAccount'
+        | 'commissionRate'
+        | 'paymentMethods'
+        | 'carriers'
+        | 'defaultCarrier'
       >
     }>('/storefront-settings'),
 }

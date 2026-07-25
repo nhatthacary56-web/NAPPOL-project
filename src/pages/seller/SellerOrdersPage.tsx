@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatPrice } from '../../data/catalog'
-import { orderApi } from '../../api'
+import { metaApi, orderApi } from '../../api'
 import { statusLabel, useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
 import type { OrderStatus } from '../../api/types'
@@ -13,14 +13,16 @@ const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
   to_review: 'completed',
 }
 
-const carriers = ['Kerry Express', 'Flash Express', 'J&T Express', 'Thai Post', 'SPX']
+const FALLBACK_CARRIERS = ['Kerry Express', 'Flash Express', 'J&T Express', 'Thai Post', 'SPX']
 
 export function SellerOrdersPage() {
   const { orders, updateOrderStatus, refreshOrders } = useStore()
   const { toast } = useToast()
   const [shipOrderId, setShipOrderId] = useState<string | null>(null)
   const [trackingNumber, setTrackingNumber] = useState('')
-  const [carrier, setCarrier] = useState(carriers[0])
+  const [carriers, setCarriers] = useState<string[]>(FALLBACK_CARRIERS)
+  const [defaultCarrier, setDefaultCarrier] = useState(FALLBACK_CARRIERS[0])
+  const [carrier, setCarrier] = useState(FALLBACK_CARRIERS[0])
   const [zortReady, setZortReady] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -29,13 +31,26 @@ export function SellerOrdersPage() {
       .zortStatus()
       .then((res) => setZortReady(res.configured))
       .catch(() => setZortReady(false))
+    void metaApi
+      .storefrontSettings()
+      .then((res) => {
+        const list =
+          res.settings.carriers && res.settings.carriers.length > 0
+            ? res.settings.carriers
+            : FALLBACK_CARRIERS
+        const def = res.settings.defaultCarrier || list[0]
+        setCarriers(list)
+        setDefaultCarrier(def)
+        setCarrier(def)
+      })
+      .catch(() => {})
   }, [])
 
   async function advance(orderId: string, status: OrderStatus) {
     if (status === 'shipping') {
       setShipOrderId(orderId)
       setTrackingNumber('')
-      setCarrier(carriers[0])
+      setCarrier(defaultCarrier)
       return
     }
     try {
@@ -63,7 +78,7 @@ export function SellerOrdersPage() {
   async function shipWithZort(orderId: string) {
     setBusyId(orderId)
     try {
-      const res = await orderApi.zortShip(orderId, { carrier: 'Kerry Express' })
+      const res = await orderApi.zortShip(orderId, { carrier: defaultCarrier })
       toast(res.message || `ได้เลขพัสดุ ${res.order.trackingNumber || ''} · เปิดใบปะหน้าบนเว็บเรา`)
       await refreshOrders()
       window.open(`/orders/${orderId}/label?print=1`, '_blank', 'noopener,noreferrer')

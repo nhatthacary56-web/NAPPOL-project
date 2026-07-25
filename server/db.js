@@ -179,6 +179,7 @@ function emptyDb() {
       secondaryColor: '#ff7337',
       accentColor: '#ffb000',
       logoText: 'Great App',
+      logoUrl: '',
     },
     settings: {
       commissionRate: 0.05,
@@ -190,10 +191,14 @@ function emptyDb() {
       },
       freeShippingMin: 199,
       shippingFee: 40,
+      paymentMethods: { cod: true, transfer: true, card: true },
+      carriers: ['Kerry Express', 'Flash Express', 'J&T Express', 'Thai Post', 'SPX'],
+      defaultCarrier: 'Kerry Express',
     },
     appContent: defaultAppContent(),
     feedPosts: [],
     helpTickets: [],
+    carts: {},
     meta: { seeded: false },
   }
 }
@@ -235,9 +240,17 @@ function defaultAppContent() {
     },
     productShippingTemplate: 'ส่งจาก {location} · ส่งฟรีเมื่อครบ ฿{freeShippingMin}',
     auth: {
-      loginHint: 'ทดลอง: buyer@great.app / buyer123 · seller@great.app / seller123',
+      loginHint: 'หากเข้าสู่ระบบไม่ได้ ติดต่อศูนย์ความช่วยเหลือ',
       buyerPitch: 'สมัครเพื่อสั่งซื้อและติดตามออเดอร์',
       sellerPitch: 'เปิดร้านขายของบนแพลตฟอร์ม',
+    },
+    legal: {
+      privacy:
+        'เราเก็บข้อมูลที่จำเป็นต่อการสั่งซื้อและการให้บริการเท่านั้น และไม่ขายข้อมูลส่วนบุคคลแก่บุคคลภายนอกโดยไม่ได้รับความยินยอม',
+      terms:
+        'การใช้แอปถือว่ายอมรับเงื่อนไขการให้บริการของแพลตฟอร์ม รวมถึงการสั่งซื้อ การชำระเงิน และการจัดส่งตามที่ระบุในแต่ละคำสั่งซื้อ',
+      returnPolicy:
+        'ลูกค้าสามารถขอคืนสินค้าได้ตามเงื่อนไขของแต่ละร้านภายในระยะเวลาที่กำหนด โดยส่งคำขอผ่านหน้าคำสั่งซื้อ',
     },
     help: {
       title: 'ศูนย์ความช่วยเหลือ',
@@ -545,7 +558,9 @@ function seed() {
     secondaryColor: '#ff7337',
     accentColor: '#ffb000',
     logoText: 'Great App',
+    logoUrl: '',
   }
+  db.carts = {}
   db.feedPosts = [
     {
       id: 'feed_demo_1',
@@ -590,6 +605,7 @@ function migrate(data) {
   if (!Array.isArray(data.helpTickets)) data.helpTickets = []
   if (!Array.isArray(data.otpCodes)) data.otpCodes = []
   if (!Array.isArray(data.feedPosts)) data.feedPosts = []
+  if (!data.carts || typeof data.carts !== 'object') data.carts = {}
   if (data.appContent?.livePage) {
     if (data.appContent.livePage.title === 'Live') {
       data.appContent.livePage.title = 'ฟีด'
@@ -607,16 +623,46 @@ function migrate(data) {
   } else {
     if (data.settings.freeShippingMin == null) data.settings.freeShippingMin = 199
     if (data.settings.shippingFee == null) data.settings.shippingFee = 40
+    if (!data.settings.paymentMethods) {
+      data.settings.paymentMethods = { cod: true, transfer: true, card: true }
+    } else {
+      data.settings.paymentMethods = {
+        cod: data.settings.paymentMethods.cod !== false,
+        transfer: data.settings.paymentMethods.transfer !== false,
+        card: data.settings.paymentMethods.card !== false,
+      }
+    }
+    if (!Array.isArray(data.settings.carriers) || data.settings.carriers.length === 0) {
+      data.settings.carriers = [
+        'Kerry Express',
+        'Flash Express',
+        'J&T Express',
+        'Thai Post',
+        'SPX',
+      ]
+    }
+    if (!data.settings.defaultCarrier) {
+      data.settings.defaultCarrier = data.settings.carriers[0] || 'Kerry Express'
+    }
   }
   if (!data.appContent) {
     data.appContent = defaultAppContent()
   } else {
     data.appContent = deepMerge(defaultAppContent(), data.appContent)
+    const hint = String(data.appContent.auth?.loginHint || '')
+    if (
+      hint.includes('buyer@great.app') ||
+      hint.includes('greatadmin') ||
+      hint.includes('seller123')
+    ) {
+      data.appContent.auth.loginHint = defaultAppContent().auth.loginHint
+    }
   }
   if (!data.brand) data.brand = emptyDb().brand
   if (!data.brand.secondaryColor) data.brand.secondaryColor = '#ff7337'
   if (!data.brand.accentColor) data.brand.accentColor = '#ffb000'
   if (!data.brand.primaryColor) data.brand.primaryColor = '#ee4d2d'
+  if (data.brand.logoUrl === undefined) data.brand.logoUrl = ''
 
   // Home promo banners: fill missing images so "ลดแรงทุกวัน" shows as photo banners
   const defaultBannerImages = Object.fromEntries(

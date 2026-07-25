@@ -184,6 +184,9 @@ export type PlatformSettings = {
   }
   freeShippingMin?: number
   shippingFee?: number
+  paymentMethods?: { cod: boolean; transfer: boolean; card: boolean }
+  carriers?: string[]
+  defaultCarrier?: string
 }
 
 export type AppContent = {
@@ -219,6 +222,7 @@ export type AppContent = {
   search: { placeholder: string; popularTitle: string }
   productShippingTemplate: string
   auth: { loginHint: string; buyerPitch: string; sellerPitch: string }
+  legal: { privacy: string; terms: string; returnPolicy: string }
   help: {
     title: string
     subtitle: string
@@ -358,6 +362,8 @@ export type Brand = {
   /** สีเน้นปุ่มรอง / badge */
   accentColor?: string
   logoText: string
+  /** URL โลโก้รูป (อัปโหลด) — ว่างได้ */
+  logoUrl?: string
 }
 
 export type CartItem = {

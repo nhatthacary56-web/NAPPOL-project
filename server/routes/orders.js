@@ -180,6 +180,11 @@ router.post('/checkout', requireAuth, (req, res) => {
     return res.status(400).json({ ok: false, message: 'ไม่มีสินค้าในคำสั่งซื้อ' })
   }
 
+  const payFlags = db.settings?.paymentMethods || { cod: true, transfer: true, card: true }
+  if (!['cod', 'transfer', 'card'].includes(paymentMethod) || payFlags[paymentMethod] === false) {
+    return res.status(400).json({ ok: false, message: 'วิธีชำระเงินนี้ไม่เปิดใช้งาน' })
+  }
+
   const address = db.addresses.find((a) => a.id === addressId && a.userId === req.user.id)
   if (!address) {
     return res.status(400).json({ ok: false, message: 'กรุณาเลือกที่อยู่จัดส่ง' })

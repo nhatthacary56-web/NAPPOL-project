@@ -5,6 +5,14 @@ import { metaApi } from '../../api'
 import { statusLabel, useStore } from '../../store/StoreContext'
 import './AdminShell.css'
 
+type HealthInfo = {
+  storage?: string
+  supabaseConfigured?: boolean
+  supabaseKeyKind?: string
+  lastPersistAt?: string | null
+  lastPersistError?: string | null
+}
+
 export function AdminDashboardPage() {
   const { orders, brand } = useStore()
   const [stats, setStats] = useState({
@@ -18,9 +26,14 @@ export function AdminDashboardPage() {
     revenue: 0,
     platformFee: 0,
   })
+  const [health, setHealth] = useState<HealthInfo | null>(null)
 
   useEffect(() => {
     void metaApi.stats().then((res) => setStats(res.stats)).catch(() => {})
+    void fetch('/health')
+      .then((r) => r.json())
+      .then((data) => setHealth(data))
+      .catch(() => setHealth(null))
   }, [orders])
 
   return (
@@ -30,14 +43,47 @@ export function AdminDashboardPage() {
         ภาพรวม {brand.name} — ใช้เมนูซ้ายตามกลุ่มงาน (ร้านค้า · การเงิน · หน้าแอป)
       </p>
 
+      <div className="admin-card" style={{ marginBottom: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: 16 }}>สถานะฐานข้อมูล / Storage</h2>
+        {health ? (
+          <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.6 }}>
+            ข้อมูลแอป:{' '}
+            <strong style={{ color: health.supabaseConfigured ? '#15803d' : '#b45309' }}>
+              {health.storage === 'supabase' ? 'Supabase app_state (เชื่อมแล้ว)' : 'local db.json'}
+            </strong>
+            <br />
+            รูปอัปโหลด:{' '}
+            <strong>
+              {health.supabaseConfigured
+                ? `Supabase Storage (${health.supabaseKeyKind || 'key'})`
+                : 'ดิสก์เครื่อง (หายเมื่อ redeploy)'}
+            </strong>
+            {health.lastPersistAt ? (
+              <>
+                <br />
+                บันทึกล่าสุด: {new Date(health.lastPersistAt).toLocaleString('th-TH')}
+              </>
+            ) : null}
+            {health.lastPersistError ? (
+              <>
+                <br />
+                <span style={{ color: '#b91c1c' }}>ข้อผิดพลาด: {health.lastPersistError}</span>
+              </>
+            ) : null}
+          </p>
+        ) : (
+          <p style={{ margin: 0, color: '#6b7280' }}>กำลังตรวจ /health ...</p>
+        )}
+      </div>
+
       <div className="admin-guide">
         <Link to="/admin/app-content">
           <strong>แก้เนื้อหาแอป</strong>
-          <span>ทางลัด · Mall · ฟีด · ค่าส่ง · ข้อความลูกเล่น</span>
+          <span>ทางลัด · Mall · นโยบาย · ค่าส่ง · ข้อความ</span>
         </Link>
-        <Link to="/admin/banners">
-          <strong>แก้หน้าแอป</strong>
-          <span>แบนเนอร์ / หมวด / Flash / แบรนด์</span>
+        <Link to="/admin/payments">
+          <strong>ชำระเงิน / ขนส่ง</strong>
+          <span>เปิด-ปิด COD · PromptPay · รายการขนส่ง</span>
         </Link>
         <Link to="/admin/shops">
           <strong>อนุมัติร้านค้า</strong>
