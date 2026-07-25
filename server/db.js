@@ -184,6 +184,7 @@ function emptyDb() {
       shippingFee: 40,
     },
     appContent: defaultAppContent(),
+    feedPosts: [],
     helpTickets: [],
     meta: { seeded: false },
   }
@@ -216,35 +217,10 @@ function defaultAppContent() {
       categorySlugs: ['electronics', 'beauty'],
     },
     livePage: {
-      title: 'Live',
-      subtitle: 'ดูไลฟ์ช้อปปิ้งแบบเรียลไทม์',
+      title: 'ฟีด',
+      subtitle: 'โพสต์รูป เขียนแคปชัน และปักตะกร้าสินค้าได้เลย',
     },
-    lives: [
-      {
-        id: 'l1',
-        title: 'ไลฟ์ลดราคาเครื่องสำอาง',
-        viewers: '12.4 พัน',
-        host: 'Beauty Lab',
-        active: true,
-        sort: 1,
-      },
-      {
-        id: 'l2',
-        title: 'แฟชั่นใหม่ประจำสัปดาห์',
-        viewers: '8.1 พัน',
-        host: 'Style Hub',
-        active: true,
-        sort: 2,
-      },
-      {
-        id: 'l3',
-        title: 'แกเจ็ตไอทีราคาพิเศษ',
-        viewers: '5.6 พัน',
-        host: 'Tech Zone',
-        active: true,
-        sort: 3,
-      },
-    ],
+    lives: [],
     search: {
       placeholder: 'ค้นหาสินค้า แบรนด์ และอื่นๆ',
       popularTitle: 'สินค้ายอดนิยม',
@@ -540,6 +516,22 @@ function seed() {
     primaryColor: '#ee4d2d',
     logoText: 'Great App',
   }
+  db.feedPosts = [
+    {
+      id: 'feed_demo_1',
+      userId: sellerId,
+      userName: 'ร้านตัวอย่าง Great',
+      userRole: 'seller',
+      image:
+        'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800&h=800&fit=crop',
+      caption: 'คอลเลกชันใหม่ประจำสัปดาห์ ปักตะกร้าไว้ให้ช้อปเลย ✨',
+      productIds: ['p1', 'p4'],
+      status: 'active',
+      likedBy: [buyerId],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ]
   db.meta = { seeded: true }
 }
 
@@ -567,6 +559,16 @@ function migrate(data) {
   if (!Array.isArray(data.userVouchers)) data.userVouchers = []
   if (!Array.isArray(data.helpTickets)) data.helpTickets = []
   if (!Array.isArray(data.otpCodes)) data.otpCodes = []
+  if (!Array.isArray(data.feedPosts)) data.feedPosts = []
+  if (data.appContent?.livePage) {
+    if (data.appContent.livePage.title === 'Live') {
+      data.appContent.livePage.title = 'ฟีด'
+    }
+    if (String(data.appContent.livePage.subtitle || '').includes('ไลฟ์')) {
+      data.appContent.livePage.subtitle =
+        'โพสต์รูป เขียนแคปชัน และปักตะกร้าสินค้าได้เลย'
+    }
+  }
   if (!Array.isArray(data.banners) || data.banners.length === 0) {
     data.banners = emptyDb().banners
   }

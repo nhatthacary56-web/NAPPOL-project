@@ -40,6 +40,7 @@ import { AdminReturnsPage } from './pages/admin/AdminReturnsPage'
 import { AdminFlashPage } from './pages/admin/AdminFlashPage'
 import { AdminAppContentPage } from './pages/admin/AdminAppContentPage'
 import { AdminHelpPage } from './pages/admin/AdminHelpPage'
+import { AdminFeedPage } from './pages/admin/AdminFeedPage'
 import { SellerShell } from './pages/seller/SellerShell'
 import { SellerDashboardPage } from './pages/seller/SellerDashboardPage'
 import { SellerProductsPage } from './pages/seller/SellerProductsPage'
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="returns" element={<AdminReturnsPage />} />
         <Route path="app-content" element={<AdminAppContentPage />} />
         <Route path="help" element={<AdminHelpPage />} />
+        <Route path="feed" element={<AdminFeedPage />} />
         <Route path="banners" element={<AdminBannersPage />} />
         <Route path="categories" element={<AdminCategoriesPage />} />
         <Route path="flash" element={<AdminFlashPage />} />

@@ -5,6 +5,7 @@ import type {
   ApiCategory,
   ApiChatMessage,
   ApiChatSummary,
+  ApiFeedPost,
   ApiHelpTicket,
   ApiNotification,
   ApiOrder,
@@ -410,4 +411,30 @@ export const helpApi = {
       method: 'PATCH',
       json: body,
     }),
+}
+
+export const feedApi = {
+  list: () => api<{ ok: true; posts: ApiFeedPost[] }>('/feed'),
+  adminList: (status?: string) => {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : ''
+    return api<{ ok: true; posts: ApiFeedPost[] }>(`/feed/admin${qs}`)
+  },
+  create: (body: { image: string; caption: string; productIds?: string[] }) =>
+    api<{ ok: true; post: ApiFeedPost; message?: string }>('/feed', {
+      method: 'POST',
+      json: body,
+    }),
+  update: (
+    id: string,
+    body: Partial<{
+      image: string
+      caption: string
+      productIds: string[]
+      status: 'pending' | 'active' | 'hidden'
+    }>,
+  ) =>
+    api<{ ok: true; post: ApiFeedPost }>(`/feed/${id}`, { method: 'PATCH', json: body }),
+  remove: (id: string) => api<{ ok: true }>(`/feed/${id}`, { method: 'DELETE' }),
+  toggleLike: (id: string) =>
+    api<{ ok: true; post: ApiFeedPost }>(`/feed/${id}/like`, { method: 'POST' }),
 }

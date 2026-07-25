@@ -33,7 +33,7 @@ export function AdminDashboardPage() {
       <div className="admin-guide">
         <Link to="/admin/app-content">
           <strong>แก้เนื้อหาแอป</strong>
-          <span>ทางลัด · Mall · Live · ค่าส่ง · ข้อความลูกเล่น</span>
+          <span>ทางลัด · Mall · ฟีด · ค่าส่ง · ข้อความลูกเล่น</span>
         </Link>
         <Link to="/admin/banners">
           <strong>แก้หน้าแอป</strong>

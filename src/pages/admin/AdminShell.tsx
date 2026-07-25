@@ -35,8 +35,9 @@ const navGroups = [
       {
         to: '/admin/app-content',
         label: 'เนื้อหาแอป',
-        desc: 'ทางลัด · Mall · Live · ค่าส่ง · ช่วยเหลือ · ข้อความ',
+        desc: 'ทางลัด · Mall · ฟีด · ค่าส่ง · ช่วยเหลือ · ข้อความ',
       },
+      { to: '/admin/feed', label: 'ฟีดโพสต์', desc: 'อนุมัติ / ซ่อนโพสต์รูป' },
       { to: '/admin/banners', label: 'แบนเนอร์', desc: 'สไลด์หน้าแรก' },
       { to: '/admin/categories', label: 'หมวดหมู่', desc: 'ไอคอนและชื่อหมวด' },
       { to: '/admin/flash', label: 'Flash Sale', desc: 'ตั้งสินค้าและเวลาหมด' },

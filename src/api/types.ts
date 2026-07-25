@@ -207,6 +207,7 @@ export type AppContent = {
     categorySlugs: string[]
   }
   livePage: { title: string; subtitle: string }
+  /** @deprecated ใช้ feedPosts API แทน — เก็บไว้เพื่อไม่พังข้อมูลเก่า */
   lives: Array<{
     id: string
     title: string
@@ -304,6 +305,22 @@ export type ApiReview = {
   rating: number
   comment: string
   createdAt: string
+}
+
+export type ApiFeedPost = {
+  id: string
+  userId: string
+  userName: string
+  userRole?: string
+  image: string
+  caption: string
+  productIds: string[]
+  products?: ApiProduct[]
+  status: 'pending' | 'active' | 'hidden'
+  likeCount: number
+  liked?: boolean
+  createdAt: string
+  updatedAt?: string
 }
 
 export type ApiNotification = {

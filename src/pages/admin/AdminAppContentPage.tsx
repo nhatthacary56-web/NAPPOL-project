@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { metaApi, walletApi } from '../../api'
 import type { AppContent } from '../../api/types'
 import { defaultAppContent } from '../../data/appContent'
@@ -62,7 +63,7 @@ export function AdminAppContentPage() {
     { id: 'shipping' as const, label: '1. ค่าส่ง', hint: 'กฎส่งฟรี / ค่าส่ง' },
     { id: 'home' as const, label: '2. หน้าแรก', hint: 'ทางลัด + Flash + สินค้าแนะนำ' },
     { id: 'mall' as const, label: '3. Mall', hint: 'หัวข้อและเงื่อนไขคัดสินค้า' },
-    { id: 'live' as const, label: '4. Live', hint: 'รายการไลฟ์ตัวอย่าง' },
+    { id: 'live' as const, label: '4. ฟีด', hint: 'หัวข้อหน้าฟีด (โพสต์อยู่เมนูฟีดโพสต์)' },
     { id: 'copy' as const, label: '5. ข้อความ', hint: 'ค้นหา / ค่าส่งสินค้า / CTA' },
     { id: 'auth' as const, label: '6. ล็อกอิน', hint: 'ข้อความหน้าเข้าสู่ระบบ' },
     { id: 'help' as const, label: '7. ช่วยเหลือ', hint: 'LINE / ช่องทาง + ข้อความฟอร์ม' },
@@ -330,7 +331,13 @@ export function AdminAppContentPage() {
 
       {section === 'live' ? (
         <form className="admin-card admin-form" onSubmit={saveContent}>
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>หน้า Live</h2>
+          <h2 style={{ marginTop: 0, fontSize: 16 }}>หน้าฟีด</h2>
+          <p style={{ color: '#6b7280', fontSize: 13, marginTop: 0 }}>
+            ระบบไลฟ์สดถูกเปลี่ยนเป็นฟีดโพสต์รูปแล้ว — อนุมัติ/ซ่อนโพสต์ที่เมนู{' '}
+            <Link to="/admin/feed" style={{ color: '#ee4d2d' }}>
+              ฟีดโพสต์
+            </Link>
+          </p>
           <div className="admin-form-grid">
             <label>
               หัวข้อหน้า
@@ -357,82 +364,8 @@ export function AdminAppContentPage() {
               />
             </label>
           </div>
-          <h3 style={{ fontSize: 14 }}>รายการไลฟ์ (แก้ได้ / เพิ่มแถว)</h3>
-          {content.lives.map((live, idx) => (
-            <div key={live.id} className="admin-form-grid" style={{ marginBottom: 8 }}>
-              <label>
-                ชื่อไลฟ์
-                <input
-                  value={live.title}
-                  onChange={(e) => {
-                    const next = [...content.lives]
-                    next[idx] = { ...live, title: e.target.value }
-                    setContent({ ...content, lives: next })
-                  }}
-                />
-              </label>
-              <label>
-                โฮสต์
-                <input
-                  value={live.host}
-                  onChange={(e) => {
-                    const next = [...content.lives]
-                    next[idx] = { ...live, host: e.target.value }
-                    setContent({ ...content, lives: next })
-                  }}
-                />
-              </label>
-              <label>
-                ผู้ชม
-                <input
-                  value={live.viewers}
-                  onChange={(e) => {
-                    const next = [...content.lives]
-                    next[idx] = { ...live, viewers: e.target.value }
-                    setContent({ ...content, lives: next })
-                  }}
-                />
-              </label>
-              <label>
-                เปิด
-                <select
-                  value={live.active === false ? '0' : '1'}
-                  onChange={(e) => {
-                    const next = [...content.lives]
-                    next[idx] = { ...live, active: e.target.value === '1' }
-                    setContent({ ...content, lives: next })
-                  }}
-                >
-                  <option value="1">เปิด</option>
-                  <option value="0">ปิด</option>
-                </select>
-              </label>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="admin-btn ghost"
-            onClick={() =>
-              setContent({
-                ...content,
-                lives: [
-                  ...content.lives,
-                  {
-                    id: `l${Date.now()}`,
-                    title: 'ไลฟ์ใหม่',
-                    host: 'Host',
-                    viewers: '1 พัน',
-                    active: true,
-                    sort: content.lives.length + 1,
-                  },
-                ],
-              })
-            }
-          >
-            + เพิ่มไลฟ์
-          </button>
-          <button type="submit" className="admin-btn" style={{ marginLeft: 8 }}>
-            บันทึก Live
+          <button type="submit" className="admin-btn">
+            บันทึกหัวข้อฟีด
           </button>
         </form>
       ) : null}

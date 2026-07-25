@@ -18,7 +18,10 @@ export const defaultAppContent: AppContent = {
     badgeFilter: 'Mall',
     categorySlugs: ['electronics', 'beauty'],
   },
-  livePage: { title: 'Live', subtitle: 'ดูไลฟ์ช้อปปิ้งแบบเรียลไทม์' },
+  livePage: {
+    title: 'ฟีด',
+    subtitle: 'โพสต์รูป เขียนแคปชัน และปักตะกร้าสินค้าได้เลย',
+  },
   lives: [],
   search: { placeholder: 'ค้นหาสินค้า แบรนด์ และอื่นๆ', popularTitle: 'สินค้ายอดนิยม' },
   productShippingTemplate: 'ส่งจาก {location} · ส่งฟรีเมื่อครบ ฿{freeShippingMin}',

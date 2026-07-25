@@ -5,7 +5,7 @@ import './AppShell.css'
 const tabs = [
   { to: '/', label: 'หน้าแรก', icon: HomeIcon, end: true },
   { to: '/mall', label: 'Mall', icon: MallIcon },
-  { to: '/live', label: 'Live', icon: LiveIcon },
+  { to: '/live', label: 'ฟีด', icon: LiveIcon },
   { to: '/notifications', label: 'แจ้งเตือน', icon: BellIcon, badge: true },
   { to: '/account', label: 'ฉัน', icon: UserIcon },
 ] as const
@@ -59,7 +59,7 @@ function MallIcon() {
 function LiveIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Zm14.2 2.2 3.3-1.9v9.4l-3.3-1.9V9.2Z" />
+      <path d="M4 5h16v3H4V5Zm0 5.5h16v3H4v-3ZM4 16h10v3H4v-3Z" />
     </svg>
   )
 }

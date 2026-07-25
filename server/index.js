@@ -21,6 +21,7 @@ import walletRoutes from './routes/wallet.js'
 import paymentRoutes from './routes/payments.js'
 import returnRoutes from './routes/returns.js'
 import helpRoutes from './routes/help.js'
+import feedRoutes from './routes/feed.js'
 
 dotenv.config()
 
@@ -83,6 +84,7 @@ app.use('/api/wallet', walletRoutes)
 app.use('/api/payments', paymentRoutes)
 app.use('/api/returns', returnRoutes)
 app.use('/api/help', helpRoutes)
+app.use('/api/feed', feedRoutes)
 app.use('/api', metaRoutes)
 
 if (isProd) {
