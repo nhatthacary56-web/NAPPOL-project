@@ -29,7 +29,8 @@ export type Banner = {
   id: string
   title: string
   subtitle: string
-  tone: 'orange' | 'coral' | 'amber'
+  image?: string | null
+  tone: 'orange' | 'coral' | 'amber' | 'pink' | 'red' | 'blue' | 'green' | 'purple' | 'teal' | 'black'
   link?: string
   active?: boolean
   sort?: number

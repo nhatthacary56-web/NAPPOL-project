@@ -260,7 +260,9 @@ export type ApiBanner = {
   id: string
   title: string
   subtitle: string
-  tone: 'orange' | 'coral' | 'amber'
+  /** รูปแบนเนอร์ — ถ้ามีจะแสดงเป็นภาพแทนการ์ดสีล้วน */
+  image?: string | null
+  tone: 'orange' | 'coral' | 'amber' | 'pink' | 'red' | 'blue' | 'green' | 'purple' | 'teal' | 'black'
   link?: string
   active?: boolean
   sort?: number
@@ -351,6 +353,10 @@ export type Brand = {
   name: string
   tagline: string
   primaryColor: string
+  /** สีไล่โทน / หัวแอป */
+  secondaryColor?: string
+  /** สีเน้นปุ่มรอง / badge */
+  accentColor?: string
   logoText: string
 }
 

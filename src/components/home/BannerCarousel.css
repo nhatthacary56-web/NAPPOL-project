@@ -20,15 +20,41 @@
 
 .banner-card {
   scroll-snap-align: start;
-  min-height: 120px;
+  min-height: 132px;
   padding: 18px 16px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md, 12px);
   color: #fff;
   position: relative;
   overflow: hidden;
+  display: block;
+  text-decoration: none;
 }
 
-.banner-card::after {
+.banner-card--photo {
+  padding: 0;
+  min-height: 148px;
+  aspect-ratio: 2.4 / 1;
+  background: #1f2937;
+}
+
+.banner-card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.banner-card--photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 35%, rgba(0, 0, 0, 0.55) 100%);
+  z-index: 1;
+}
+
+.banner-card:not(.banner-card--photo)::after {
   content: '';
   position: absolute;
   right: -20px;
@@ -42,41 +68,76 @@
 .banner-card--orange {
   background: linear-gradient(135deg, #ff6a3d, #ee4d2d);
 }
-
 .banner-card--coral {
   background: linear-gradient(135deg, #ff8a5c, #f0452d);
 }
-
 .banner-card--amber {
   background: linear-gradient(135deg, #ffb347, #ff7a2f);
+}
+.banner-card--pink {
+  background: linear-gradient(135deg, #ff5cad, #e91e8c);
+}
+.banner-card--red {
+  background: linear-gradient(135deg, #ff4d4f, #cf1322);
+}
+.banner-card--blue {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+.banner-card--green {
+  background: linear-gradient(135deg, #34d399, #059669);
+}
+.banner-card--purple {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+}
+.banner-card--teal {
+  background: linear-gradient(135deg, #2dd4bf, #0f766e);
+}
+.banner-card--black {
+  background: linear-gradient(135deg, #4b5563, #111827);
+}
+
+.banner-card__copy {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 14px 14px 12px;
+  box-sizing: border-box;
+}
+
+.banner-card:not(.banner-card--photo) .banner-card__copy {
+  padding: 0;
+  justify-content: flex-start;
 }
 
 .banner-card__title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  position: relative;
-  z-index: 1;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
 }
 
 .banner-card__subtitle {
-  margin: 6px 0 14px;
-  font-size: 13px;
+  margin: 0;
+  font-size: 12px;
   opacity: 0.95;
-  position: relative;
-  z-index: 1;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
 }
 
 .banner-card__cta {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
+  margin-top: 8px;
   min-height: 28px;
   padding: 0 12px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   color: var(--brand);
   font-size: 12px;
-  font-weight: 600;
-  position: relative;
-  z-index: 1;
+  font-weight: 700;
 }

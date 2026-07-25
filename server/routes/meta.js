@@ -53,14 +53,30 @@ router.get('/brand', (_req, res) => {
 
 router.put('/brand', requireRole('admin'), (req, res) => {
   const db = getDb()
-  const { name, tagline, primaryColor, logoText } = req.body ?? {}
+  if (!db.brand) db.brand = {}
+  const { name, tagline, primaryColor, secondaryColor, accentColor, logoText } = req.body ?? {}
   if (name) db.brand.name = String(name).trim()
   if (tagline !== undefined) db.brand.tagline = String(tagline).trim()
   if (primaryColor) db.brand.primaryColor = String(primaryColor).trim()
+  if (secondaryColor) db.brand.secondaryColor = String(secondaryColor).trim()
+  if (accentColor) db.brand.accentColor = String(accentColor).trim()
   if (logoText) db.brand.logoText = String(logoText).trim()
   persist()
   res.json({ ok: true, brand: db.brand })
 })
+
+const BANNER_TONES = [
+  'orange',
+  'coral',
+  'amber',
+  'pink',
+  'red',
+  'blue',
+  'green',
+  'purple',
+  'teal',
+  'black',
+]
 
 router.get('/categories', (_req, res) => {
   res.json({ ok: true, categories: getDb().categories })
@@ -137,13 +153,16 @@ router.get('/banners/all', requireRole('admin'), (_req, res) => {
 
 router.post('/banners', requireRole('admin'), (req, res) => {
   const db = getDb()
-  const { title, subtitle, tone, link, active = true, sort } = req.body ?? {}
-  if (!title?.trim()) return res.status(400).json({ ok: false, message: 'ใส่หัวข้อแบนเนอร์' })
+  const { title, subtitle, tone, link, active = true, sort, image } = req.body ?? {}
+  if (!title?.trim() && !String(image || '').trim()) {
+    return res.status(400).json({ ok: false, message: 'ใส่หัวข้อหรือรูปแบนเนอร์อย่างน้อยอย่างใดอย่างหนึ่ง' })
+  }
   const banner = {
     id: createId('bn'),
-    title: title.trim(),
+    title: String(title || '').trim() || 'โปรโมชัน',
     subtitle: String(subtitle || '').trim(),
-    tone: ['orange', 'coral', 'amber'].includes(tone) ? tone : 'orange',
+    image: String(image || '').trim() || null,
+    tone: BANNER_TONES.includes(tone) ? tone : 'orange',
     link: String(link || '/mall').trim(),
     active: Boolean(active),
     sort: Number(sort) || (db.banners?.length || 0) + 1,
@@ -158,9 +177,12 @@ router.put('/banners/:id', requireRole('admin'), (req, res) => {
   const db = getDb()
   const banner = (db.banners || []).find((b) => b.id === req.params.id)
   if (!banner) return res.status(404).json({ ok: false, message: 'ไม่พบแบนเนอร์' })
-  for (const key of ['title', 'subtitle', 'tone', 'link', 'active', 'sort']) {
+  for (const key of ['title', 'subtitle', 'tone', 'link', 'active', 'sort', 'image']) {
     if (req.body[key] !== undefined) {
-      banner[key] = key === 'sort' ? Number(req.body[key]) : req.body[key]
+      if (key === 'sort') banner[key] = Number(req.body[key])
+      else if (key === 'tone') banner[key] = BANNER_TONES.includes(req.body[key]) ? req.body[key] : banner.tone
+      else if (key === 'image') banner[key] = String(req.body[key] || '').trim() || null
+      else banner[key] = req.body[key]
     }
   }
   persist()

@@ -141,6 +141,8 @@ const defaultBrand: Brand = {
   name: 'Great App',
   tagline: 'ช้อปง่าย ได้ของดี',
   primaryColor: '#ee4d2d',
+  secondaryColor: '#ff7337',
+  accentColor: '#ffb000',
   logoText: 'Great App',
 }
 
@@ -163,11 +165,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => saveJson(CART_KEY, cart), [cart])
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--brand', brand.primaryColor)
-    document.documentElement.style.setProperty(
-      '--brand-grad',
-      `linear-gradient(90deg, ${brand.primaryColor} 0%, #ff7337 100%)`,
-    )
+    const primary = brand.primaryColor || '#ee4d2d'
+    const secondary = brand.secondaryColor || '#ff7337'
+    const accent = brand.accentColor || '#ffb000'
+    const root = document.documentElement
+    root.style.setProperty('--brand', primary)
+    root.style.setProperty('--brand-secondary', secondary)
+    root.style.setProperty('--brand-accent', accent)
+    root.style.setProperty('--brand-grad', `linear-gradient(90deg, ${primary} 0%, ${secondary} 100%)`)
+    root.style.setProperty('--brand-gradient', `linear-gradient(90deg, ${primary} 0%, ${secondary} 100%)`)
+    root.style.setProperty('--brand-soft', `color-mix(in srgb, ${primary} 14%, white)`)
     document.title = brand.name
   }, [brand])
 

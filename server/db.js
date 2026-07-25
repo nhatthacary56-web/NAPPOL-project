@@ -142,6 +142,8 @@ function emptyDb() {
         id: 'b1',
         title: 'ลดแรงทุกวัน',
         subtitle: 'โค้ดส่วนลดสูงสุด ฿100',
+        image:
+          'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&h=480&fit=crop',
         tone: 'orange',
         link: '/mall',
         active: true,
@@ -151,6 +153,8 @@ function emptyDb() {
         id: 'b2',
         title: 'Flash Sale',
         subtitle: 'หมดเวลาในอีกไม่กี่ชั่วโมง',
+        image:
+          'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=480&fit=crop',
         tone: 'coral',
         link: '/mall',
         active: true,
@@ -160,6 +164,8 @@ function emptyDb() {
         id: 'b3',
         title: 'ส่งฟรีทั่วไทย',
         subtitle: 'เมื่อช้อปครบเงื่อนไข',
+        image:
+          'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=480&fit=crop',
         tone: 'amber',
         link: '/',
         active: true,
@@ -170,6 +176,8 @@ function emptyDb() {
       name: 'Great App',
       tagline: 'ช้อปง่าย ได้ของดี',
       primaryColor: '#ee4d2d',
+      secondaryColor: '#ff7337',
+      accentColor: '#ffb000',
       logoText: 'Great App',
     },
     settings: {
@@ -514,6 +522,8 @@ function seed() {
     name: 'Great App',
     tagline: 'ช้อปง่าย ได้ของดี',
     primaryColor: '#ee4d2d',
+    secondaryColor: '#ff7337',
+    accentColor: '#ffb000',
     logoText: 'Great App',
   }
   db.feedPosts = [
@@ -582,6 +592,13 @@ function migrate(data) {
     data.appContent = defaultAppContent()
   } else {
     data.appContent = deepMerge(defaultAppContent(), data.appContent)
+  }
+  if (!data.brand) data.brand = emptyDb().brand
+  if (!data.brand.secondaryColor) data.brand.secondaryColor = '#ff7337'
+  if (!data.brand.accentColor) data.brand.accentColor = '#ffb000'
+  if (!data.brand.primaryColor) data.brand.primaryColor = '#ee4d2d'
+  for (const banner of data.banners ?? []) {
+    if (banner.image === undefined) banner.image = null
   }
   for (const product of data.products ?? []) {
     if (typeof product.stock !== 'number') product.stock = 100
