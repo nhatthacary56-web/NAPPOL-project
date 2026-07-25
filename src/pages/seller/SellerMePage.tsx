@@ -109,13 +109,17 @@ export function SellerMePage() {
       </section>
 
       <section className="seller-card seller-menu-list">
-        <h2 className="seller-section-title">การเงิน</h2>
+        <h2 className="seller-section-title">การเงินและการตลาด</h2>
         <Link to="/seller/wallet" className="seller-menu-row">
           <span>รายรับของฉัน</span>
           <span aria-hidden>›</span>
         </Link>
         <Link to="/seller/wallet" className="seller-menu-row">
           <span>ยอดคงเหลือ / ถอนเงิน</span>
+          <span aria-hidden>›</span>
+        </Link>
+        <Link to="/seller/vouchers" className="seller-menu-row">
+          <span>คูปองส่วนลดร้าน</span>
           <span aria-hidden>›</span>
         </Link>
       </section>

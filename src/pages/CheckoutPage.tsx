@@ -69,13 +69,40 @@ export function CheckoutPage() {
     [selectedItems, getProductById],
   )
 
-  const usableVouchers = claimedVouchers.filter((v) => !v.used)
+  const cartShopIds = useMemo(
+    () => new Set(lines.map((line) => line.product.shopId).filter(Boolean)),
+    [lines],
+  )
+
+  const usableVouchers = claimedVouchers.filter((v) => {
+    if (v.used) return false
+    if (v.scope === 'shop' && v.shopId) return cartShopIds.has(v.shopId)
+    return true
+  })
+
   const subtotal = lines.reduce((sum, item) => sum + item.price * item.qty, 0)
   const shippingFee = subtotal >= shipping.freeShippingMin ? 0 : shipping.shippingFee
   const voucher = usableVouchers.find((item) => item.code === voucherCode)
-  const meetsMin = voucher ? subtotal >= voucher.minSpend : true
+
+  const shopSubtotalForVoucher =
+    voucher?.scope === 'shop' && voucher.shopId
+      ? lines
+          .filter((line) => line.product.shopId === voucher.shopId)
+          .reduce((sum, item) => sum + item.price * item.qty, 0)
+      : subtotal
+
+  const meetsMin = voucher
+    ? voucher.scope === 'shop'
+      ? shopSubtotalForVoucher >= voucher.minSpend
+      : subtotal >= voucher.minSpend
+    : true
   const discount =
-    voucher && meetsMin ? Math.min(voucher.discount, subtotal + shippingFee) : 0
+    voucher && meetsMin
+      ? Math.min(
+          voucher.discount,
+          voucher.scope === 'shop' ? shopSubtotalForVoucher : subtotal + shippingFee,
+        )
+      : 0
   const total = Math.max(0, subtotal + shippingFee - discount)
 
   async function submit() {
@@ -85,7 +112,11 @@ export function CheckoutPage() {
       return
     }
     if (voucherCode && voucher && !meetsMin) {
-      toast(`คูปองนี้ใช้เมื่อยอดครบ ${formatPrice(voucher.minSpend)}`)
+      toast(
+        voucher.scope === 'shop'
+          ? `คูปองร้านใช้เมื่อซื้อในร้านครบ ${formatPrice(voucher.minSpend)}`
+          : `คูปองนี้ใช้เมื่อยอดครบ ${formatPrice(voucher.minSpend)}`,
+      )
       return
     }
     const result = await placeOrder({
@@ -174,14 +205,19 @@ export function CheckoutPage() {
             <option value="">ไม่ใช้คูปอง</option>
             {usableVouchers.map((voucherItem) => (
               <option key={voucherItem.code} value={voucherItem.code}>
+                {voucherItem.scope === 'shop' ? '[ร้าน] ' : ''}
                 {voucherItem.title} ({voucherItem.code}) · ขั้นต่ำ{' '}
                 {formatPrice(voucherItem.minSpend)}
+                {voucherItem.shopName ? ` · ${voucherItem.shopName}` : ''}
               </option>
             ))}
           </select>
           {voucher && !meetsMin ? (
             <p className="checkout-card__hint">
-              ยอดยังไม่ถึงขั้นต่ำ {formatPrice(voucher.minSpend)} — ยังใช้คูปองนี้ไม่ได้
+              {voucher.scope === 'shop'
+                ? `ยอดในร้านยังไม่ถึงขั้นต่ำ ${formatPrice(voucher.minSpend)}`
+                : `ยอดยังไม่ถึงขั้นต่ำ ${formatPrice(voucher.minSpend)}`}{' '}
+              — ยังใช้คูปองนี้ไม่ได้
             </p>
           ) : null}
         </section>

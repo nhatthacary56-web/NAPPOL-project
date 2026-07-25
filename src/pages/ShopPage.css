@@ -8,6 +8,29 @@
   color: #fff;
 }
 
+.shop-page__hero-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shop-page__logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.shop-page__logo--fallback {
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 800;
+}
+
 .shop-page__hero h1 {
   margin: 0;
   font-size: 22px;

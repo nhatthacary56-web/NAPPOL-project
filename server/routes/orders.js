@@ -221,6 +221,12 @@ router.post('/checkout', requireAuth, (req, res) => {
     if (!shop || shop.status !== 'active') {
       return res.status(400).json({ ok: false, message: `ร้านของสินค้า ${product.name} ยังไม่พร้อม` })
     }
+    if (shop.vacationMode) {
+      return res.status(400).json({
+        ok: false,
+        message: `ร้าน ${shop.name} อยู่ในโหมดพักร้อนชั่วคราว`,
+      })
+    }
     const qty = Math.max(1, Number(line.qty) || 1)
     const variants = Array.isArray(product.variants) ? product.variants : []
     let variant = null
@@ -265,7 +271,56 @@ router.post('/checkout', requireAuth, (req, res) => {
     })
   }
 
-  // commit stock
+  const grandSubtotal = orderItems.reduce((s, i) => s + i.price * i.qty, 0)
+  const freeMin = db.settings?.freeShippingMin ?? 199
+  const shipFee = db.settings?.shippingFee ?? 40
+  const grandShipping = grandSubtotal >= freeMin ? 0 : shipFee
+
+  // one order per shop
+  const byShop = new Map()
+  for (const item of orderItems) {
+    if (!byShop.has(item.shopId)) byShop.set(item.shopId, [])
+    byShop.get(item.shopId).push(item)
+  }
+  const shopEntries = [...byShop.entries()]
+
+  const isShopVoucher = voucher && voucher.scope === 'shop' && voucher.shopId
+  if (isShopVoucher) {
+    if (!byShop.has(voucher.shopId)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'คูปองนี้ใช้ได้เฉพาะสินค้าจากร้านที่ออกคูปอง',
+      })
+    }
+    const shopSubtotal = byShop
+      .get(voucher.shopId)
+      .reduce((s, i) => s + i.price * i.qty, 0)
+    if (shopSubtotal < (voucher.minSpend || 0)) {
+      return res.status(400).json({
+        ok: false,
+        message: `คูปองร้านใช้เมื่อซื้อในร้านครบ ฿${voucher.minSpend}`,
+      })
+    }
+  }
+
+  let grandDiscount = 0
+  if (voucher) {
+    if (isShopVoucher) {
+      const shopSubtotal = byShop
+        .get(voucher.shopId)
+        .reduce((s, i) => s + i.price * i.qty, 0)
+      grandDiscount = Math.min(voucher.discount, shopSubtotal)
+    } else if (grandSubtotal >= (voucher.minSpend || 0)) {
+      grandDiscount = Math.min(voucher.discount, grandSubtotal + grandShipping)
+    } else {
+      return res.status(400).json({
+        ok: false,
+        message: `คูปองนี้ใช้เมื่อยอดครบ ฿${voucher.minSpend}`,
+      })
+    }
+  }
+
+  // commit stock (หลังตรวจคูปองแล้ว)
   for (const item of orderItems) {
     const product = db.products.find((p) => p.id === item.productId)
     product.stock = Math.max(0, (product.stock || 0) - item.qty)
@@ -276,36 +331,24 @@ router.post('/checkout', requireAuth, (req, res) => {
     }
   }
 
-  const grandSubtotal = orderItems.reduce((s, i) => s + i.price * i.qty, 0)
-  const freeMin = db.settings?.freeShippingMin ?? 199
-  const shipFee = db.settings?.shippingFee ?? 40
-  const grandShipping = grandSubtotal >= freeMin ? 0 : shipFee
-  const grandDiscount =
-    voucher && grandSubtotal >= voucher.minSpend
-      ? Math.min(voucher.discount, grandSubtotal + grandShipping)
-      : 0
-
-  // one order per shop
-  const byShop = new Map()
-  for (const item of orderItems) {
-    if (!byShop.has(item.shopId)) byShop.set(item.shopId, [])
-    byShop.get(item.shopId).push(item)
-  }
-
   const status = paymentMethod === 'cod' ? 'to_ship' : 'unpaid'
   const settings = db.settings
   const created = []
   let shippingAssigned = false
-  let discountLeft = grandDiscount
-  const shopEntries = [...byShop.entries()]
+  let discountLeft = isShopVoucher ? 0 : grandDiscount
 
   shopEntries.forEach(([shopId, shopItems], index) => {
     const subtotal = shopItems.reduce((s, i) => s + i.price * i.qty, 0)
-    const share =
-      grandSubtotal > 0 ? subtotal / grandSubtotal : 1 / Math.max(1, shopEntries.length)
-    let discount = Math.round(grandDiscount * share)
-    if (index === shopEntries.length - 1) discount = discountLeft
-    else discountLeft -= discount
+    let discount = 0
+    if (isShopVoucher) {
+      discount = shopId === voucher.shopId ? grandDiscount : 0
+    } else {
+      const share =
+        grandSubtotal > 0 ? subtotal / grandSubtotal : 1 / Math.max(1, shopEntries.length)
+      discount = Math.round(grandDiscount * share)
+      if (index === shopEntries.length - 1) discount = discountLeft
+      else discountLeft -= discount
+    }
     const shippingFee = !shippingAssigned ? grandShipping : 0
     if (!shippingAssigned && grandShipping > 0) shippingAssigned = true
     const total = Math.max(0, subtotal + shippingFee - discount)

@@ -455,6 +455,25 @@ function seed() {
       description: 'ร้านตัวอย่างสำหรับทดลองระบบ (ยังไม่เปิดขายจริง)',
       location: 'กรุงเทพฯ',
       status: 'active',
+      vacationMode: false,
+      logoUrl: '',
+      coverUrl: '',
+      contactName: 'แม่ค้าทดลอง',
+      contactPhone: '0811111111',
+      contactEmail: 'seller@great.app',
+      businessType: 'individual',
+      idCardNumber: '1-2345-67890-12-3',
+      idCardImageUrl:
+        'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=500&fit=crop',
+      selfieImageUrl: '',
+      taxId: '',
+      addressLine: '123 ถนนตัวอย่าง แขวงตัวอย่าง เขตวัฒนา กรุงเทพฯ 10110',
+      bankName: 'ธนาคารกสิกรไทย',
+      bankAccountName: 'แม่ค้าทดลอง',
+      bankAccountNumber: '1234567890',
+      bookBankImageUrl: '',
+      kycNote: 'ร้านเดโม',
+      rejectionReason: '',
       shopCategories: [
         { id: 'sc_demo_1', name: 'สินค้าแนะนำ', sortOrder: 0 },
         { id: 'sc_demo_2', name: 'เสื้อผ้า', sortOrder: 1 },
@@ -483,6 +502,8 @@ function seed() {
       minSpend: 299,
       expiresAt: '2026-12-31',
       active: true,
+      scope: 'platform',
+      shopId: null,
     },
     {
       code: 'FREESHIP',
@@ -492,6 +513,8 @@ function seed() {
       minSpend: 199,
       expiresAt: '2026-12-31',
       active: true,
+      scope: 'platform',
+      shopId: null,
     },
     {
       code: 'NEW100',
@@ -501,6 +524,19 @@ function seed() {
       minSpend: 500,
       expiresAt: '2026-09-30',
       active: true,
+      scope: 'platform',
+      shopId: null,
+    },
+    {
+      code: 'SHOP10',
+      title: 'ลด ฿10 ในร้าน',
+      description: 'เมื่อซื้อในร้านนี้ครบ ฿500',
+      discount: 10,
+      minSpend: 500,
+      expiresAt: '2026-12-31',
+      active: true,
+      scope: 'shop',
+      shopId,
     },
   ]
 
@@ -654,6 +690,29 @@ function migrate(data) {
     for (const shop of data.shops) {
       if (shop.vacationMode == null) shop.vacationMode = false
       if (!Array.isArray(shop.shopCategories)) shop.shopCategories = []
+      if (shop.logoUrl === undefined) shop.logoUrl = ''
+      if (shop.coverUrl === undefined) shop.coverUrl = ''
+      if (shop.contactName === undefined) shop.contactName = ''
+      if (shop.contactPhone === undefined) shop.contactPhone = ''
+      if (shop.contactEmail === undefined) shop.contactEmail = ''
+      if (!shop.businessType) shop.businessType = 'individual'
+      if (shop.idCardNumber === undefined) shop.idCardNumber = ''
+      if (shop.idCardImageUrl === undefined) shop.idCardImageUrl = ''
+      if (shop.selfieImageUrl === undefined) shop.selfieImageUrl = ''
+      if (shop.taxId === undefined) shop.taxId = ''
+      if (shop.addressLine === undefined) shop.addressLine = ''
+      if (shop.bankName === undefined) shop.bankName = ''
+      if (shop.bankAccountName === undefined) shop.bankAccountName = ''
+      if (shop.bankAccountNumber === undefined) shop.bankAccountNumber = ''
+      if (shop.bookBankImageUrl === undefined) shop.bookBankImageUrl = ''
+      if (shop.kycNote === undefined) shop.kycNote = ''
+      if (shop.rejectionReason === undefined) shop.rejectionReason = ''
+    }
+  }
+  if (Array.isArray(data.vouchers)) {
+    for (const voucher of data.vouchers) {
+      if (!voucher.scope) voucher.scope = 'platform'
+      if (voucher.shopId === undefined) voucher.shopId = null
     }
   }
 

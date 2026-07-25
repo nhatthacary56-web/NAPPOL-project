@@ -62,14 +62,25 @@ router.post('/withdraw', requireRole('seller', 'admin'), (req, res) => {
     return res.status(400).json({ ok: false, message: 'ยอดเงินไม่พอถอน' })
   }
 
+  if (!shop.bankName || !shop.bankAccountNumber || !shop.bankAccountName) {
+    return res.status(400).json({
+      ok: false,
+      message: 'กรุณาบันทึกบัญชีธนาคารในตั้งค่าร้านก่อนถอนเงิน',
+    })
+  }
+
   wallet.balance -= amount
+  const bankLine = `${shop.bankName} · ${shop.bankAccountName} · ${shop.bankAccountNumber}`
   const withdrawal = {
     id: createId('wd'),
     shopId: shop.id,
     shopName: shop.name,
     amount,
     status: 'pending',
-    note: String(req.body?.note || '').trim(),
+    note: String(req.body?.note || '').trim() || bankLine,
+    bankName: shop.bankName,
+    bankAccountName: shop.bankAccountName,
+    bankAccountNumber: shop.bankAccountNumber,
     createdAt: new Date().toISOString(),
     processedAt: null,
   }

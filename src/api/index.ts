@@ -175,14 +175,18 @@ export const shopApi = {
       shop: Shop
       shopCategories?: ShopCategory[]
       products: ApiProduct[]
+      vouchers?: ApiVoucher[]
     }>(`/shops/${slug}${q ? `?${q}` : ''}`)
   },
-  register: (body: { name: string; description?: string; location?: string }) =>
+  register: (body: Partial<Shop> & { name: string }) =>
     api<{ ok: true; shop: Shop }>('/shops/register', { method: 'POST', json: body }),
   updateMine: (body: Partial<Shop>) =>
     api<{ ok: true; shop: Shop }>('/shops/mine', { method: 'PATCH', json: body }),
-  setStatus: (id: string, status: Shop['status']) =>
-    api<{ ok: true; shop: Shop }>(`/shops/${id}/status`, { method: 'PATCH', json: { status } }),
+  setStatus: (id: string, status: Shop['status'], rejectionReason?: string) =>
+    api<{ ok: true; shop: Shop }>(`/shops/${id}/status`, {
+      method: 'PATCH',
+      json: { status, rejectionReason },
+    }),
   setVacation: (id: string, vacationMode: boolean) =>
     api<{ ok: true; shop: Shop }>(`/shops/${id}/vacation`, {
       method: 'PATCH',
@@ -373,7 +377,13 @@ export const notificationApi = {
 }
 
 export const voucherApi = {
-  list: () => api<{ ok: true; vouchers: ApiVoucher[] }>('/vouchers'),
+  list: (params?: { shopId?: string; shopOnly?: boolean }) => {
+    const qs = new URLSearchParams()
+    if (params?.shopId) qs.set('shopId', params.shopId)
+    if (params?.shopOnly) qs.set('shopOnly', '1')
+    const q = qs.toString()
+    return api<{ ok: true; vouchers: ApiVoucher[] }>(`/vouchers${q ? `?${q}` : ''}`)
+  },
   mine: () => api<{ ok: true; vouchers: ApiVoucher[] }>('/vouchers/mine'),
   claim: (code: string) =>
     api<{ ok: true; voucher: ApiVoucher }>('/vouchers/claim', {
@@ -385,6 +395,17 @@ export const voucherApi = {
   update: (code: string, body: Partial<ApiVoucher>) =>
     api<{ ok: true; voucher: ApiVoucher }>(`/vouchers/${code}`, { method: 'PUT', json: body }),
   remove: (code: string) => api<{ ok: true }>(`/vouchers/${code}`, { method: 'DELETE' }),
+  adminAll: () => api<{ ok: true; vouchers: ApiVoucher[] }>('/vouchers/admin'),
+  shopMine: () => api<{ ok: true; vouchers: ApiVoucher[]; shopId: string }>('/vouchers/shop/mine'),
+  shopCreate: (body: Partial<ApiVoucher>) =>
+    api<{ ok: true; voucher: ApiVoucher }>('/vouchers/shop', { method: 'POST', json: body }),
+  shopUpdate: (code: string, body: Partial<ApiVoucher>) =>
+    api<{ ok: true; voucher: ApiVoucher }>(`/vouchers/shop/${code}`, {
+      method: 'PUT',
+      json: body,
+    }),
+  shopRemove: (code: string) =>
+    api<{ ok: true }>(`/vouchers/shop/${code}`, { method: 'DELETE' }),
 }
 
 export const addressApi = {

@@ -7,6 +7,7 @@ const sideLinks = [
   { to: '/seller/tools', label: 'เครื่องมือ' },
   { to: '/seller/products', label: 'สินค้า' },
   { to: '/seller/orders', label: 'ออเดอร์' },
+  { to: '/seller/vouchers', label: 'คูปองร้าน' },
   { to: '/seller/returns', label: 'คืนสินค้า' },
   { to: '/seller/wallet', label: 'การเงิน' },
   { to: '/chats', label: 'แชท' },

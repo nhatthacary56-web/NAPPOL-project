@@ -56,9 +56,14 @@ export function VouchersPage() {
                 <p>{voucher.description}</p>
                 <p className="voucher-card__meta">
                   โค้ด {voucher.code} · หมดอายุ {voucher.expiresAt}
+                  {voucher.scope === 'shop'
+                    ? ` · ร้าน${voucher.shopName ? ` ${voucher.shopName}` : ''}`
+                    : ''}
                 </p>
               </div>
-              <span className="voucher-card__owned">พร้อมใช้</span>
+              <span className="voucher-card__owned">
+                {voucher.used ? 'ใช้แล้ว' : 'พร้อมใช้'}
+              </span>
             </article>
           ))
         )}

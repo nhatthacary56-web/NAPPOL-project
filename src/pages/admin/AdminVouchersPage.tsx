@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { voucherApi } from '../../api'
 import { formatPrice } from '../../data/catalog'
 import { useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
@@ -16,9 +17,19 @@ const emptyForm = {
 }
 
 export function AdminVouchersPage() {
-  const { vouchers, upsertVoucher, deleteVoucher } = useStore()
+  const { upsertVoucher, deleteVoucher, refreshVouchers } = useStore()
   const { toast } = useToast()
   const [form, setForm] = useState(emptyForm)
+  const [vouchers, setVouchers] = useState<ApiVoucher[]>([])
+
+  async function reload() {
+    const res = await voucherApi.adminAll()
+    setVouchers(res.vouchers)
+  }
+
+  useEffect(() => {
+    void reload().catch(() => setVouchers([]))
+  }, [])
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -30,11 +41,14 @@ export function AdminVouchersPage() {
       minSpend: Number(form.minSpend),
       expiresAt: form.expiresAt,
       active: form.active,
+      scope: 'platform',
     }
     try {
       await upsertVoucher(voucher)
-      toast('บันทึกคูปองแล้ว')
+      toast('บันทึกคูปองแพลตฟอร์มแล้ว')
       setForm(emptyForm)
+      await refreshVouchers()
+      await reload()
     } catch (error) {
       toast(error instanceof Error ? error.message : 'บันทึกไม่สำเร็จ')
     }
@@ -43,7 +57,9 @@ export function AdminVouchersPage() {
   return (
     <div className="admin-page">
       <h1>คูปอง</h1>
-      <p className="admin-page__sub">สร้างโค้ดส่วนลดที่ใช้ตอน checkout ได้จริง</p>
+      <p className="admin-page__sub">
+        สร้างคูปองแพลตฟอร์มได้ที่นี่ · คูปองร้านสร้างโดยผู้ขาย (ลบได้จากตารางด้านล่าง)
+      </p>
 
       <div className="admin-card" style={{ marginBottom: 16 }}>
         <form className="admin-form" onSubmit={onSubmit}>
@@ -84,7 +100,7 @@ export function AdminVouchersPage() {
             </label>
           </div>
           <button className="admin-btn" type="submit">
-            บันทึกคูปอง
+            บันทึกคูปองแพลตฟอร์ม
           </button>
         </form>
       </div>
@@ -95,6 +111,7 @@ export function AdminVouchersPage() {
             <tr>
               <th>โค้ด</th>
               <th>ชื่อ</th>
+              <th>ประเภท</th>
               <th>ส่วนลด</th>
               <th></th>
             </tr>
@@ -103,8 +120,16 @@ export function AdminVouchersPage() {
             {vouchers.map((voucher) => (
               <tr key={voucher.code}>
                 <td>{voucher.code}</td>
-                <td>{voucher.title}</td>
-                <td>{formatPrice(voucher.discount)}</td>
+                <td>
+                  {voucher.title}
+                  {voucher.shopName ? (
+                    <div style={{ color: '#6b7280', fontSize: 12 }}>{voucher.shopName}</div>
+                  ) : null}
+                </td>
+                <td>{voucher.scope === 'shop' ? 'ร้าน' : 'แพลตฟอร์ม'}</td>
+                <td>
+                  {formatPrice(voucher.discount)} / ขั้นต่ำ {formatPrice(voucher.minSpend)}
+                </td>
                 <td>
                   <button
                     type="button"
@@ -112,6 +137,7 @@ export function AdminVouchersPage() {
                     onClick={async () => {
                       await deleteVoucher(voucher.code)
                       toast('ลบคูปองแล้ว')
+                      await reload()
                     }}
                   >
                     ลบ

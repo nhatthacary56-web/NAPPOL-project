@@ -21,6 +21,13 @@ export type ShopCategory = {
   sortOrder?: number
 }
 
+export type ShopBankAccount = {
+  bankName: string
+  accountName: string
+  accountNumber: string
+  bookBankImageUrl?: string
+}
+
 export type Shop = {
   id: string
   ownerId: string
@@ -33,6 +40,25 @@ export type Shop = {
   vacationMode?: boolean
   shopCategories?: ShopCategory[]
   createdAt: string
+  /** โปรไฟล์ร้าน */
+  logoUrl?: string
+  coverUrl?: string
+  contactName?: string
+  contactPhone?: string
+  contactEmail?: string
+  businessType?: 'individual' | 'company'
+  /** KYC */
+  idCardNumber?: string
+  idCardImageUrl?: string
+  selfieImageUrl?: string
+  taxId?: string
+  addressLine?: string
+  bankName?: string
+  bankAccountName?: string
+  bankAccountNumber?: string
+  bookBankImageUrl?: string
+  kycNote?: string
+  rejectionReason?: string
 }
 
 export type ApiProduct = {
@@ -182,6 +208,9 @@ export type ApiWithdrawal = {
   status: 'pending' | 'approved' | 'rejected'
   note?: string
   adminNote?: string
+  bankName?: string
+  bankAccountName?: string
+  bankAccountNumber?: string
   createdAt: string
   processedAt?: string | null
 }
@@ -366,6 +395,10 @@ export type ApiVoucher = {
   minSpend: number
   expiresAt: string
   active: boolean
+  /** platform = ทั้งแอป, shop = ใช้กับร้านนั้นเท่านั้น */
+  scope?: 'platform' | 'shop'
+  shopId?: string | null
+  shopName?: string | null
   claimedAt?: string
   usedAt?: string | null
   used?: boolean

@@ -1,11 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { formatPrice } from '../../data/catalog'
 import { orderApi, walletApi } from '../../api'
 import type { ApiWallet, ApiWithdrawal } from '../../api/types'
+import { useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
 import './SellerShell.css'
 
 export function SellerWalletPage() {
+  const { shop } = useStore()
   const { toast } = useToast()
   const [wallet, setWallet] = useState<ApiWallet | null>(null)
   const [withdrawals, setWithdrawals] = useState<ApiWithdrawal[]>([])
@@ -122,6 +125,21 @@ export function SellerWalletPage() {
       </div>
 
       <div className="seller-card">
+        <h2 style={{ marginTop: 0, fontSize: 16 }}>บัญชีรับเงิน</h2>
+        {shop?.bankName && shop.bankAccountNumber ? (
+          <p style={{ margin: 0, color: '#374151', fontSize: 14 }}>
+            {shop.bankName}
+            <br />
+            {shop.bankAccountName} · {shop.bankAccountNumber}
+          </p>
+        ) : (
+          <p style={{ margin: 0, color: '#b45309' }}>
+            ยังไม่มีบัญชีธนาคาร — <Link to="/seller/shop">ไปตั้งค่าร้าน</Link>
+          </p>
+        )}
+      </div>
+
+      <div className="seller-card">
         <h2 style={{ marginTop: 0, fontSize: 16 }}>ขอถอนเงิน</h2>
         <form className="seller-form" onSubmit={onWithdraw}>
           <label>
@@ -135,8 +153,12 @@ export function SellerWalletPage() {
             />
           </label>
           <label>
-            หมายเหตุ / บัญชีรับโอน
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="ธนาคาร xxx" />
+            หมายเหตุเพิ่มเติม (ไม่บังคับ)
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="ระบบจะใช้บัญชีในตั้งค่าร้านอัตโนมัติ"
+            />
           </label>
           <button type="submit" className="seller-btn">
             ส่งคำขอถอน

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../components/layout/PageHeader'
+import { ShopCouponStrip } from '../components/shop/ShopCouponStrip'
 import { formatPrice, formatSold } from '../data/catalog'
-import { catalogApi, chatApi, reviewApi } from '../api'
-import type { ApiProduct, ApiReview } from '../api/types'
+import { catalogApi, chatApi, reviewApi, voucherApi } from '../api'
+import type { ApiProduct, ApiReview, ApiVoucher } from '../api/types'
 import { useCatalog } from '../store/CatalogContext'
 import { useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
@@ -13,6 +14,7 @@ export function ProductPage() {
   const { id = '' } = useParams()
   const [product, setProduct] = useState<ApiProduct | null>(null)
   const [reviews, setReviews] = useState<ApiReview[]>([])
+  const [shopVouchers, setShopVouchers] = useState<ApiVoucher[]>([])
   const [missing, setMissing] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
   const [variantId, setVariantId] = useState('')
@@ -35,6 +37,14 @@ export function ProductPage() {
         setProduct(res.product)
         setActiveImage(0)
         setVariantId(res.product.variants?.[0]?.id || '')
+        if (res.product.shopId) {
+          void voucherApi
+            .list({ shopId: res.product.shopId, shopOnly: true })
+            .then((v) => setShopVouchers(v.vouchers))
+            .catch(() => setShopVouchers([]))
+        } else {
+          setShopVouchers([])
+        }
       })
       .catch(() => setMissing(true))
     void reviewApi
@@ -214,6 +224,9 @@ export function ProductPage() {
             </p>
           ) : null}
         </section>
+        {shopVouchers.length > 0 ? (
+          <ShopCouponStrip vouchers={shopVouchers} title="คูปองจากร้านนี้" />
+        ) : null}
         {product.description ? (
           <section className="product-page__detail section">
             <h2>รายละเอียดสินค้า</h2>
