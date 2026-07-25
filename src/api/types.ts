@@ -72,9 +72,15 @@ export type ApiAddress = {
   name: string
   phone: string
   line1: string
+  /** ชั้น / ยูนิต (ถ้ามี) */
+  line2?: string
+  /** อำเภอ/เขต */
   district: string
+  /** ตำบล/แขวง */
+  subdistrict?: string
   province: string
   postalCode: string
+  addressType?: 'home' | 'office' | 'other'
   isDefault?: boolean
 }
 

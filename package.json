@@ -26,7 +26,8 @@
     "pngjs": "^7.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.2"
+    "react-router-dom": "^7.6.2",
+    "thai-address-database": "^0.0.31"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

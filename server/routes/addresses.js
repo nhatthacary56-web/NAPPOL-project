@@ -10,21 +10,39 @@ router.get('/', requireAuth, (req, res) => {
 })
 
 router.post('/', requireAuth, (req, res) => {
-  const { name, phone, line1, district, province, postalCode, isDefault } = req.body ?? {}
+  const {
+    name,
+    phone,
+    line1,
+    line2,
+    district,
+    subdistrict,
+    province,
+    postalCode,
+    addressType,
+    isDefault,
+  } = req.body ?? {}
   if (!name || !phone || !line1 || !district || !province || !postalCode) {
     return res.status(400).json({ ok: false, message: 'กรอกที่อยู่ให้ครบ' })
   }
   const db = getDb()
   const mine = db.addresses.filter((a) => a.userId === req.user.id)
+  const type =
+    addressType === 'office' || addressType === 'other' || addressType === 'home'
+      ? addressType
+      : 'home'
   const address = {
     id: createId('addr'),
     userId: req.user.id,
     name: name.trim(),
     phone: phone.trim(),
     line1: line1.trim(),
+    line2: String(line2 || '').trim(),
     district: district.trim(),
+    subdistrict: String(subdistrict || '').trim(),
     province: province.trim(),
     postalCode: postalCode.trim(),
+    addressType: type,
     isDefault: Boolean(isDefault) || mine.length === 0,
   }
   if (address.isDefault) {
