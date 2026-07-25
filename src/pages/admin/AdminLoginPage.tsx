@@ -6,13 +6,14 @@ import './AdminShell.css'
 
 const DEMO_USER = 'admin'
 const DEMO_PASS = 'greatadmin'
+const showDemoHelpers = !import.meta.env.PROD
 
 export function AdminLoginPage() {
   const { isAdmin, adminLogin } = useStore()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const [username, setUsername] = useState(DEMO_USER)
-  const [password, setPassword] = useState(DEMO_PASS)
+  const [username, setUsername] = useState(showDemoHelpers ? DEMO_USER : '')
+  const [password, setPassword] = useState(showDemoHelpers ? DEMO_PASS : '')
   const [busy, setBusy] = useState(false)
 
   if (isAdmin) return <Navigate to="/admin" replace />
@@ -37,7 +38,7 @@ export function AdminLoginPage() {
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin หรือ admin@great.app"
+              placeholder="อีเมลแอดมิน"
               autoComplete="username"
               required
             />
@@ -56,25 +57,29 @@ export function AdminLoginPage() {
             {busy ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบแอดมิน'}
           </button>
         </form>
-        <button
-          type="button"
-          className="admin-login__demo"
-          onClick={() => {
-            setUsername(DEMO_USER)
-            setPassword(DEMO_PASS)
-          }}
-        >
-          ใส่บัญชีทดลองให้อัตโนมัติ
-        </button>
+        {showDemoHelpers ? (
+          <>
+            <button
+              type="button"
+              className="admin-login__demo"
+              onClick={() => {
+                setUsername(DEMO_USER)
+                setPassword(DEMO_PASS)
+              }}
+            >
+              ใส่บัญชีทดลองให้อัตโนมัติ
+            </button>
+            <p className="admin-login__hint">
+              บัญชีทดลอง (เฉพาะโหมดพัฒนา)
+              <br />
+              ผู้ใช้: <strong>{DEMO_USER}</strong> · รหัส: <strong>{DEMO_PASS}</strong>
+              <br />
+              หรืออีเมล: <strong>admin@great.app</strong> / <strong>{DEMO_PASS}</strong>
+            </p>
+          </>
+        ) : null}
         <p className="admin-login__hint">
-          บัญชีทดลอง
-          <br />
-          ผู้ใช้: <strong>{DEMO_USER}</strong> · รหัส: <strong>{DEMO_PASS}</strong>
-          <br />
-          หรืออีเมล: <strong>admin@great.app</strong> / <strong>{DEMO_PASS}</strong>
-        </p>
-        <p className="admin-login__hint">
-          <Link to="/login">กลับหน้าเข้าสู่ระบบลูกค้า</Link>
+          <Link to="/">กลับหน้าแรก</Link>
         </p>
       </div>
     </div>

@@ -346,6 +346,7 @@ export async function initDb() {
         loadLocalFile()
         console.log('[supabase] no remote snapshot yet — seeding')
       }
+      syncAdminPasswordFromEnv()
       await saveAppState(db)
       console.log('[supabase] persist ok')
       ready = true
@@ -361,12 +362,31 @@ export async function initDb() {
     }
   }
   loadLocalFile()
+  syncAdminPasswordFromEnv()
   ready = true
   return db
 }
 
+function adminPasswordPlain() {
+  const fromEnv = String(process.env.ADMIN_PASSWORD || '').trim()
+  return fromEnv || 'greatadmin'
+}
+
+/** Apply ADMIN_PASSWORD from env to the seeded admin account on boot. */
+export function syncAdminPasswordFromEnv() {
+  const fromEnv = String(process.env.ADMIN_PASSWORD || '').trim()
+  if (!fromEnv || !db?.users) return false
+  const admin = db.users.find((u) => u.role === 'admin' && u.email === 'admin@great.app')
+  if (!admin) return false
+  if (admin.passwordHash && bcrypt.compareSync(fromEnv, admin.passwordHash)) return false
+  admin.passwordHash = bcrypt.hashSync(fromEnv, 10)
+  persist()
+  console.log('[auth] admin password synced from ADMIN_PASSWORD')
+  return true
+}
+
 function seed() {
-  const adminPass = bcrypt.hashSync('greatadmin', 10)
+  const adminPass = bcrypt.hashSync(adminPasswordPlain(), 10)
   const sellerPass = bcrypt.hashSync('seller123', 10)
   const buyerPass = bcrypt.hashSync('buyer123', 10)
 

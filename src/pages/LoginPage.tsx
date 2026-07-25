@@ -273,7 +273,7 @@ export function LoginPage() {
           className="auth-email-toggle"
           onClick={() => setShowEmail((v) => !v)}
         >
-          {showEmail ? 'ซ่อนอีเมล/รหัสผ่าน' : 'เข้าด้วยอีเมล (แอดมิน / เดโม่เดิม)'}
+          {showEmail ? 'ซ่อนอีเมล/รหัสผ่าน' : 'เข้าด้วยอีเมล'}
         </button>
 
         {showEmail ? (
@@ -284,7 +284,7 @@ export function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="buyer@great.app"
+                placeholder="you@email.com"
                 required
               />
             </label>
@@ -308,13 +308,6 @@ export function LoginPage() {
         </p>
         <p className="auth-page__switch">
           เป็นพ่อค้าแม่ค้า? <Link to="/register?role=seller">สมัครผู้ขาย</Link>
-        </p>
-        <p className="auth-page__switch">
-          แอดมินหลังบ้าน? <Link to="/admin/login">เข้าสู่ระบบแอดมิน</Link>
-          <br />
-          <span style={{ fontSize: 12, color: '#6b7280' }}>
-            admin / greatadmin หรือ admin@great.app / greatadmin
-          </span>
         </p>
         <p className="auth-page__hint">{appContent.auth.loginHint}</p>
       </main>

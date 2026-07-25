@@ -1,7 +1,20 @@
 import jwt from 'jsonwebtoken'
 import { findUserById, publicUser } from './db.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'great-app-dev-secret-change-me'
+const DEV_FALLBACK_SECRET = 'great-app-dev-secret-change-me'
+const isProd = process.env.NODE_ENV === 'production'
+
+export function assertJwtSecret() {
+  const secret = String(process.env.JWT_SECRET || '').trim()
+  if (isProd && (!secret || secret === DEV_FALLBACK_SECRET)) {
+    console.error(
+      '[auth] JWT_SECRET must be set to a strong random value in production (not the dev default).',
+    )
+    process.exit(1)
+  }
+}
+
+const JWT_SECRET = String(process.env.JWT_SECRET || '').trim() || DEV_FALLBACK_SECRET
 
 export function signToken(user) {
   return jwt.sign(

@@ -4,6 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 import { flushPersist, getDb, initDb } from './db.js'
+import { assertJwtSecret } from './auth.js'
 import { getStorageStatus, probeSupabase } from './supabase.js'
 import authRoutes from './routes/auth.js'
 import productRoutes from './routes/products.js'
@@ -32,6 +33,7 @@ const uploadsDir = path.resolve(__dirname, 'uploads')
 const port = Number(process.env.PORT) || 3000
 const isProd = process.env.NODE_ENV === 'production'
 
+assertJwtSecret()
 await initDb()
 
 const app = express()
@@ -113,8 +115,12 @@ app.listen(port, '0.0.0.0', () => {
       '[supabase] SUPABASE_SECRET_KEY looks like a publishable key — use sb_secret_... instead',
     )
   }
-  console.log(`Demo accounts:`)
-  console.log(`  admin@great.app / greatadmin`)
-  console.log(`  seller@great.app / seller123`)
-  console.log(`  buyer@great.app / buyer123`)
+  if (!isProd) {
+    console.log(`Demo accounts (dev only):`)
+    console.log(`  admin@great.app / (ADMIN_PASSWORD or greatadmin)`)
+    console.log(`  seller@great.app / seller123`)
+    console.log(`  buyer@great.app / buyer123`)
+  } else {
+    console.log(`Admin entry: /admin/login (set ADMIN_PASSWORD + JWT_SECRET in env)`)
+  }
 })

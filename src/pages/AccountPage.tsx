@@ -25,7 +25,7 @@ export function AccountPage() {
     ...(user?.role === 'seller' || user?.role === 'admin'
       ? [{ label: shop ? 'แดชบอร์ดร้านค้า' : 'เปิดร้านขายของ', to: '/seller' }]
       : [{ label: 'สมัครเป็นผู้ขาย', to: '/register?role=seller' }]),
-    { label: 'เข้าสู่ระบบแอดมิน', to: '/admin/login' },
+    ...(user?.role === 'admin' ? [{ label: 'หลังบ้านแอดมิน', to: '/admin' }] : []),
   ]
 
   return (

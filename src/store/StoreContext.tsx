@@ -696,26 +696,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setBrand(res.brand)
   }, [])
 
-  const adminLogin = useCallback(
-    async (username: string, password: string) => {
-      const email = username.includes('@') ? username : 'admin@great.app'
-      const pass = username === 'admin' && !username.includes('@') ? password : password
-      // allow shorthand admin / greatadmin
-      const result =
-        username === 'admin'
-          ? await login('admin@great.app', password)
-          : await login(email, pass)
-      if (result.ok) {
-        const me = await authApi.me()
-        if (me.user.role !== 'admin') {
-          logout()
-          return { ok: false, message: 'บัญชีนี้ไม่ใช่แอดมิน' }
-        }
+  const adminLogin = useCallback(async (username: string, password: string) => {
+    const email = username.trim().toLowerCase() === 'admin' ? 'admin@great.app' : username.trim()
+    try {
+      const res = await authApi.adminLogin(email, password)
+      setToken(res.token)
+      setUser(res.user)
+      const me = await authApi.me()
+      if (me.user.role !== 'admin') {
+        setToken(null)
+        setUser(null)
+        setShop(null)
+        return { ok: false, message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }
       }
-      return result
-    },
-    [login, logout],
-  )
+      setShop(me.shop)
+      return { ok: true, message: res.message || 'เข้าสู่ระบบแอดมินสำเร็จ' }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'เข้าสู่ระบบไม่สำเร็จ',
+      }
+    }
+  }, [])
 
   const adminLogout = logout
 

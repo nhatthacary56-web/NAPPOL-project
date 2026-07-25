@@ -13,8 +13,17 @@ import {
   publicUser,
 } from '../db.js'
 import { signToken, requireAuth } from '../auth.js'
+import { createRateLimiter } from '../rateLimit.js'
 
 const router = Router()
+
+const authLoginLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'พยายามเข้าสู่ระบบบ่อยเกินไป',
+})
+
+const GENERIC_LOGIN_FAIL = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
 
 function authProviders() {
   return {
@@ -144,14 +153,40 @@ router.post('/register', (req, res) => {
   res.status(201).json(issueSession(user))
 })
 
-router.post('/login', (req, res) => {
+router.post('/login', authLoginLimiter, (req, res) => {
   const { email, password } = req.body ?? {}
   const user = findUserByEmail(email ?? '')
   if (!user || !user.passwordHash || !bcrypt.compareSync(password ?? '', user.passwordHash)) {
-    return res.status(401).json({ ok: false, message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' })
+    return res.status(401).json({ ok: false, message: GENERIC_LOGIN_FAIL })
+  }
+  // Admins must use /auth/admin-login — keep customer login separate
+  if (user.role === 'admin') {
+    return res.status(401).json({ ok: false, message: GENERIC_LOGIN_FAIL })
   }
   if (user.banned) return res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
   res.json(issueSession(user))
+})
+
+router.post('/admin-login', authLoginLimiter, (req, res) => {
+  const raw = String(req.body?.email || req.body?.username || '').trim().toLowerCase()
+  const password = req.body?.password ?? ''
+  // Shorthand "admin" → seeded admin email
+  const email = raw === 'admin' ? 'admin@great.app' : raw
+  if (!email.includes('@') || !password) {
+    return res.status(401).json({ ok: false, message: GENERIC_LOGIN_FAIL })
+  }
+
+  const user = findUserByEmail(email)
+  if (
+    !user ||
+    user.role !== 'admin' ||
+    !user.passwordHash ||
+    !bcrypt.compareSync(password, user.passwordHash)
+  ) {
+    return res.status(401).json({ ok: false, message: GENERIC_LOGIN_FAIL })
+  }
+  if (user.banned) return res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
+  res.json({ ...issueSession(user), message: 'เข้าสู่ระบบแอดมินสำเร็จ' })
 })
 
 router.post('/otp/request', (req, res) => {

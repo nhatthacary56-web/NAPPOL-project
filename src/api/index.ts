@@ -37,6 +37,11 @@ export const authApi = {
       method: 'POST',
       json: { email, password },
     }),
+  adminLogin: (email: string, password: string) =>
+    api<{ ok: true; token: string; user: ApiUser; message?: string }>('/auth/admin-login', {
+      method: 'POST',
+      json: { email, password },
+    }),
   providers: () =>
     api<{
       ok: true
