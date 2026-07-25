@@ -50,7 +50,14 @@ async function zortRequest(method, path, { query, body, headerExtras } = {}) {
   }
   const code = String(json?.res?.resCode ?? json?.resCode ?? res.status)
   if (!res.ok || (code && code !== '200')) {
-    const desc = json?.res?.resDesc || json?.resDesc || json?.message || `ZORT error ${code}`
+    let desc = json?.res?.resDesc || json?.resDesc || json?.message || `ZORT error ${code}`
+    if (/was not in a correct format/i.test(desc)) {
+      desc =
+        'ข้อมูลที่อยู่/รหัสไปรษณีย์/เบอร์โทร รูปแบบไม่ถูกต้อง — แก้ที่อยู่ลูกค้าให้เป็นตัวเลขไปรษณีย์ 5 หลัก แล้วลองใหม่'
+    }
+    if (/FlashExpressAccountNotRegistered/i.test(desc)) {
+      desc = 'บัญชี Flash Express ยังไม่ได้ผูกใน ZORT — ใช้ Kerry หรือผูก Flash ใน ZORT ก่อน'
+    }
     const err = new Error(desc)
     err.code = 'ZORT_API'
     err.resCode = code
@@ -85,14 +92,61 @@ export function carrierLabelFromZort(code) {
   return map[String(code || '').toLowerCase()] || code || 'ZORT'
 }
 
+function digitsOnly(value) {
+  return String(value || '').replace(/\D/g, '')
+}
+
+/** Thai mobile/phone: keep 9–10 digits, prefer leading 0 */
+function sanitizePhone(value, fallback = '0812345678') {
+  let digits = digitsOnly(value)
+  if (digits.startsWith('66') && digits.length >= 11) digits = `0${digits.slice(2)}`
+  if (digits.length === 9 && /^[689]/.test(digits)) digits = `0${digits}`
+  if (digits.length < 9 || digits.length > 10) return fallback
+  return digits
+}
+
+/** Thai postcode must be exactly 5 digits */
+function sanitizePostcode(value, fallback = '10000') {
+  const digits = digitsOnly(value)
+  if (digits.length === 5) return digits
+  return fallback
+}
+
 function fullAddress(address) {
-  return [address.line1, address.district, address.province, address.postalCode]
+  const postcode = sanitizePostcode(address?.postalCode, '')
+  return [address?.line1, address?.district, address?.province, postcode]
     .filter(Boolean)
     .join(' ')
 }
 
 function orderNumberFor(order) {
   return order.zortOrderNumber || `GA-${order.id}`
+}
+
+function assertShipAddress(order) {
+  const addr = order.address || {}
+  const phone = sanitizePhone(addr.phone, '')
+  const postcode = sanitizePostcode(addr.postalCode, '')
+  if (!addr.name?.trim()) {
+    throw Object.assign(new Error('ที่อยู่จัดส่งไม่มีชื่อผู้รับ'), { code: 'BAD_ADDRESS' })
+  }
+  if (!addr.line1?.trim()) {
+    throw Object.assign(new Error('ที่อยู่จัดส่งไม่มีบ้านเลขที่/ถนน'), { code: 'BAD_ADDRESS' })
+  }
+  if (!phone) {
+    throw Object.assign(new Error('เบอร์โทรผู้รับไม่ถูกต้อง (ต้องเป็นตัวเลข 9–10 หลัก)'), {
+      code: 'BAD_ADDRESS',
+    })
+  }
+  if (!postcode) {
+    throw Object.assign(
+      new Error(
+        `รหัสไปรษณีย์ไม่ถูกต้อง: "${addr.postalCode || ''}" — ต้องเป็นตัวเลข 5 หลัก เช่น 10500`,
+      ),
+      { code: 'BAD_ADDRESS' },
+    )
+  }
+  return { phone, postcode }
 }
 
 export function buildZortOrderPayload(order) {
@@ -131,6 +185,7 @@ export function buildZortOrderPayload(order) {
   }
 
   const addr = order.address || {}
+  const { phone, postcode } = assertShipAddress(order)
   const isCod = order.paymentMethod === 'cod'
   return {
     number,
@@ -142,13 +197,13 @@ export function buildZortOrderPayload(order) {
     status: isCod ? 'Pending' : 'Success',
     reference: order.id,
     saleschannel: 'Great App',
-    customercode: order.userId,
+    customercode: String(order.userId || '').replace(/[^\w-]/g, '').slice(0, 40) || 'guest',
     customername: addr.name || 'ลูกค้า',
-    customerphone: addr.phone || '',
-    customeraddress: fullAddress(addr),
+    customerphone: phone,
+    customeraddress: fullAddress({ ...addr, postalCode: postcode }),
     shippingname: addr.name || 'ลูกค้า',
-    shippingphone: addr.phone || '',
-    shippingaddress: fullAddress(addr),
+    shippingphone: phone,
+    shippingaddress: fullAddress({ ...addr, postalCode: postcode }),
     shippingchannel: '',
     paymentmethod: isCod ? 'COD' : order.paymentMethod === 'card' ? 'Credit Card' : 'Transfer',
     paymentamount: amount,
@@ -160,24 +215,27 @@ export function buildZortOrderPayload(order) {
 
 export function buildBookShipmentBody(order, shopProfile = {}) {
   const addr = order.address || {}
-  // ZORT rejects empty sender fields — fall back to env / safe defaults.
+  const { phone, postcode } = assertShipAddress(order)
+  // ZORT rejects empty/invalid sender fields — fall back to env / safe defaults.
   const senderName =
     shopProfile.name || process.env.ZORT_SENDER_NAME || 'Great App Shop'
-  const senderPhone =
-    shopProfile.phone || process.env.ZORT_SENDER_PHONE || '0812345678'
+  const senderPhone = sanitizePhone(
+    shopProfile.phone || process.env.ZORT_SENDER_PHONE,
+    '0812345678',
+  )
   const senderEmail =
     shopProfile.email || process.env.ZORT_SENDER_EMAIL || process.env.ZORT_STORENAME || ''
   const senderAddress =
-    shopProfile.address ||
-    process.env.ZORT_SENDER_ADDRESS ||
-    '99 ถนนพระราม 9'
+    shopProfile.address || process.env.ZORT_SENDER_ADDRESS || '99 ถนนพระราม 9'
   const senderDistrict =
     shopProfile.district || process.env.ZORT_SENDER_DISTRICT || 'ห้วยขวาง'
   const senderCity = shopProfile.city || process.env.ZORT_SENDER_CITY || 'ห้วยขวาง'
   const senderProvince =
     shopProfile.province || process.env.ZORT_SENDER_PROVINCE || 'กรุงเทพมหานคร'
-  const senderPostcode =
-    shopProfile.postcode || process.env.ZORT_SENDER_POSTCODE || '10310'
+  const senderPostcode = sanitizePostcode(
+    shopProfile.postcode || process.env.ZORT_SENDER_POSTCODE,
+    '10310',
+  )
 
   return {
     senderName,
@@ -189,15 +247,15 @@ export function buildBookShipmentBody(order, shopProfile = {}) {
     senderProvince,
     senderPostcode,
     recipientName: addr.name || 'ลูกค้า',
-    recipientPhone: addr.phone || '',
+    recipientPhone: phone,
     recipientEmail: '',
-    recipientAddress: addr.line1 || fullAddress(addr) || 'ที่อยู่จัดส่ง',
+    recipientAddress: addr.line1 || fullAddress({ ...addr, postalCode: postcode }) || 'ที่อยู่จัดส่ง',
     recipientDistrict: addr.district || 'ไม่ระบุ',
     recipientCity: addr.district || 'ไม่ระบุ',
     recipientProvince: addr.province || 'กรุงเทพมหานคร',
-    recipientPostcode: addr.postalCode || '10000',
+    recipientPostcode: postcode,
     codAmount: order.paymentMethod === 'cod' ? Number(order.total) || 0 : 0,
-    parcelWeight: Number(process.env.ZORT_DEFAULT_WEIGHT_G || 500),
+    parcelWeight: Number(process.env.ZORT_DEFAULT_WEIGHT_G || 500) || 500,
   }
 }
 
