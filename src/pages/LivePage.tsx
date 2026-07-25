@@ -224,7 +224,17 @@ function FeedCard({ post, onLike }: { post: ApiFeedPost; onLike: () => void }) {
         </div>
       </header>
       <div className="feed-card__media">
-        <img src={post.image} alt="" />
+        <img
+          src={post.image}
+          alt=""
+          onError={(e) => {
+            const el = e.currentTarget
+            if (el.dataset.fallback === '1') return
+            el.dataset.fallback = '1'
+            el.src =
+              'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=800&fit=crop'
+          }}
+        />
       </div>
       <div className="feed-card__actions">
         <button type="button" className={post.liked ? 'is-liked' : undefined} onClick={onLike}>

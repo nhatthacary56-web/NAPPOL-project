@@ -597,8 +597,24 @@ function migrate(data) {
   if (!data.brand.secondaryColor) data.brand.secondaryColor = '#ff7337'
   if (!data.brand.accentColor) data.brand.accentColor = '#ffb000'
   if (!data.brand.primaryColor) data.brand.primaryColor = '#ee4d2d'
+
+  // Home promo banners: fill missing images so "ลดแรงทุกวัน" shows as photo banners
+  const defaultBannerImages = Object.fromEntries(
+    (emptyDb().banners || []).map((b) => [b.id, b.image]).filter(([, img]) => img),
+  )
+  const fallbackBannerPool = [
+    'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&h=480&fit=crop',
+    'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=480&fit=crop',
+    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=480&fit=crop',
+  ]
+  let bannerImgIdx = 0
   for (const banner of data.banners ?? []) {
-    if (banner.image === undefined) banner.image = null
+    if (!banner.image) {
+      banner.image =
+        defaultBannerImages[banner.id] ||
+        fallbackBannerPool[bannerImgIdx % fallbackBannerPool.length]
+      bannerImgIdx += 1
+    }
   }
   for (const product of data.products ?? []) {
     if (typeof product.stock !== 'number') product.stock = 100

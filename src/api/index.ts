@@ -269,7 +269,12 @@ export const uploadApi = {
     const res = await fetch('/api/upload', { method: 'POST', headers, body: form })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.message || 'อัปโหลดไม่สำเร็จ')
-    return data as { ok: true; url: string }
+    return data as {
+      ok: true
+      url: string
+      storage?: 'supabase' | 'local'
+      warning?: string
+    }
   },
 }
 

@@ -18,7 +18,9 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
     try {
       const res = await uploadApi.image(file)
       onChange(res.url)
-      toast('อัปโหลดรูปสำเร็จ')
+      if (res.warning) toast(res.warning)
+      else if (res.storage === 'supabase') toast('อัปโหลดรูปถาวรสำเร็จ')
+      else toast('อัปโหลดรูปสำเร็จ')
     } catch (error) {
       toast(error instanceof Error ? error.message : 'อัปโหลดไม่สำเร็จ')
     } finally {
