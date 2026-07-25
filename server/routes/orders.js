@@ -11,6 +11,7 @@ import {
   reverseShopPending,
 } from '../db.js'
 import { requireAuth } from '../auth.js'
+import { createShipmentForOrder, getShipmentLabels, isZortConfigured } from '../zort.js'
 
 const router = Router()
 
@@ -139,6 +140,14 @@ router.get('/seller', requireAuth, (req, res) => {
     }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   res.json({ ok: true, orders })
+})
+
+router.get('/zort/status', requireAuth, (_req, res) => {
+  res.json({
+    ok: true,
+    configured: isZortConfigured(),
+    defaultShipment: process.env.ZORT_DEFAULT_SHIPMENT || 'flashexpress',
+  })
 })
 
 router.get('/:id', requireAuth, (req, res) => {
@@ -523,6 +532,133 @@ router.patch('/:id/status', requireAuth, (req, res) => {
 
   persist()
   res.json({ ok: true, order })
+})
+
+router.post('/:id/zort/ship', requireAuth, async (req, res) => {
+  const db = getDb()
+  const order = db.orders.find((o) => o.id === req.params.id)
+  if (!order) return res.status(404).json({ ok: false, message: 'ไม่พบคำสั่งซื้อ' })
+
+  if (!isZortConfigured()) {
+    return res.status(503).json({
+      ok: false,
+      message: 'ยังไม่ได้ตั้งค่า ZORT บนเซิร์ฟเวอร์',
+    })
+  }
+
+  const isAdmin = req.user.role === 'admin'
+  const shop = req.user.role === 'seller' ? getShopByOwner(req.user.id) : null
+  const isSeller = shop && order.items.some((i) => i.shopId === shop.id)
+  if (!isAdmin && !isSeller) {
+    return res.status(403).json({ ok: false, message: 'ไม่มีสิทธิ์เรียกขนส่ง' })
+  }
+  if (order.status === 'unpaid') {
+    return res.status(400).json({ ok: false, message: 'รอลูกค้าชำระเงินก่อนจัดส่ง' })
+  }
+  if (!['to_ship', 'shipping'].includes(order.status)) {
+    return res.status(400).json({ ok: false, message: 'สถานะออเดอร์นี้เรียกขนส่งไม่ได้' })
+  }
+
+  const force = Boolean(req.body?.force)
+  if (order.trackingNumber && !force) {
+    return res.json({
+      ok: true,
+      order,
+      message: 'ออเดอร์นี้มีเลขพัสดุแล้ว',
+    })
+  }
+
+  const carrier = String(req.body?.carrier || order.carrier || 'Flash Express')
+  const owner = shop ? db.users.find((u) => u.id === shop.ownerId) : null
+  const shopProfile = shop
+    ? {
+        name: shop.name,
+        phone: owner?.phone || '',
+        email: owner?.email || '',
+        address: shop.location || '',
+        province: '',
+        district: '',
+        city: '',
+        postcode: '',
+      }
+    : undefined
+
+  try {
+    const shipped = await createShipmentForOrder(order, { carrier, shopProfile })
+    if (!shipped.trackingNumber) {
+      return res.status(502).json({
+        ok: false,
+        message: 'ZORT สร้างออเดอร์แล้ว แต่ยังไม่มีเลข Tracking',
+        detail: shipped,
+      })
+    }
+
+    order.zortOrderId = shipped.zortOrderId
+    order.zortOrderNumber = shipped.zortOrderNumber
+    order.trackingNumber = shipped.trackingNumber
+    order.carrier = shipped.carrier
+    order.shippingLabelUrl = shipped.shippingLabelUrl || order.shippingLabelUrl || null
+    order.status = 'shipping'
+    order.shippedAt = new Date().toISOString()
+
+    pushNotification(order.userId, {
+      type: 'order',
+      title: 'อัปเดตสถานะคำสั่งซื้อ',
+      body: `ออเดอร์ ${order.id}: กำลังจัดส่ง · ${order.carrier} ${order.trackingNumber}`,
+      link: `/orders/${order.id}`,
+    })
+
+    persist()
+    res.json({
+      ok: true,
+      order,
+      message: 'เรียกขนส่ง ZORT สำเร็จ',
+    })
+  } catch (error) {
+    res.status(502).json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'เรียก ZORT ไม่สำเร็จ',
+      code: error.code,
+      detail: error.detail || undefined,
+    })
+  }
+})
+
+router.get('/:id/zort/label', requireAuth, async (req, res) => {
+  const db = getDb()
+  const order = db.orders.find((o) => o.id === req.params.id)
+  if (!order) return res.status(404).json({ ok: false, message: 'ไม่พบคำสั่งซื้อ' })
+
+  const isAdmin = req.user.role === 'admin'
+  const isOwner = order.userId === req.user.id
+  const shop = req.user.role === 'seller' ? getShopByOwner(req.user.id) : null
+  const isSeller = shop && order.items.some((i) => i.shopId === shop.id)
+  if (!isAdmin && !isSeller && !isOwner) {
+    return res.status(403).json({ ok: false, message: 'ไม่มีสิทธิ์' })
+  }
+
+  if (!order.zortOrderId && !order.zortOrderNumber) {
+    return res.status(400).json({ ok: false, message: 'ออเดอร์นี้ยังไม่ได้ส่งเข้า ZORT' })
+  }
+
+  try {
+    const labels = await getShipmentLabels(order)
+    if (labels.shippingLabelUrl) {
+      order.shippingLabelUrl = labels.shippingLabelUrl
+      persist()
+    }
+    res.json({
+      ok: true,
+      order,
+      shippingLabelUrl: order.shippingLabelUrl,
+      labels: labels.labels,
+    })
+  } catch (error) {
+    res.status(502).json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'ดึงใบปะหน้าไม่สำเร็จ',
+    })
+  }
 })
 
 export default router

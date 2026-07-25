@@ -153,6 +153,17 @@ export const orderApi = {
       method: 'POST',
       json: body ?? {},
     }),
+  zortStatus: () =>
+    api<{ ok: true; configured: boolean; defaultShipment: string }>('/orders/zort/status'),
+  zortShip: (id: string, body?: { carrier?: string; force?: boolean }) =>
+    api<{ ok: true; order: ApiOrder; message?: string }>(`/orders/${id}/zort/ship`, {
+      method: 'POST',
+      json: body ?? {},
+    }),
+  zortLabel: (id: string) =>
+    api<{ ok: true; order: ApiOrder; shippingLabelUrl?: string | null }>(
+      `/orders/${id}/zort/label`,
+    ),
 }
 
 export const chatApi = {

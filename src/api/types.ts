@@ -97,6 +97,9 @@ export type ApiOrder = {
   trackingNumber?: string | null
   carrier?: string | null
   shippedAt?: string | null
+  zortOrderId?: number | string | null
+  zortOrderNumber?: string | null
+  shippingLabelUrl?: string | null
   settlements?: Record<
     string,
     { gross: number; fee: number; net: number; status: string }

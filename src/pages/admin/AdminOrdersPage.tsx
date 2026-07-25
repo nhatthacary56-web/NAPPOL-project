@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatPrice } from '../../data/catalog'
+import { orderApi } from '../../api'
 import { statusLabel, useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
 import type { OrderStatus } from '../../api/types'
@@ -17,13 +18,22 @@ export function AdminOrdersPage() {
   const { toast } = useToast()
   const [shipOrderId, setShipOrderId] = useState<string | null>(null)
   const [trackingNumber, setTrackingNumber] = useState('')
-  const [carrier, setCarrier] = useState('Kerry Express')
+  const [carrier, setCarrier] = useState('Flash Express')
+  const [zortReady, setZortReady] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  useEffect(() => {
+    void orderApi
+      .zortStatus()
+      .then((res) => setZortReady(res.configured))
+      .catch(() => setZortReady(false))
+  }, [])
 
   async function advance(orderId: string, status: OrderStatus) {
     if (status === 'shipping') {
       setShipOrderId(orderId)
       setTrackingNumber('')
-      setCarrier('Kerry Express')
+      setCarrier('Flash Express')
       return
     }
     try {
@@ -40,15 +50,32 @@ export function AdminOrdersPage() {
       await updateOrderStatus(shipOrderId, 'shipping', { trackingNumber, carrier })
       toast('จัดส่งแล้ว')
       setShipOrderId(null)
+      await refreshOrders()
     } catch (error) {
       toast(error instanceof Error ? error.message : 'จัดส่งไม่สำเร็จ')
+    }
+  }
+
+  async function shipWithZort(orderId: string) {
+    setBusyId(orderId)
+    try {
+      const res = await orderApi.zortShip(orderId, { carrier: 'Flash Express' })
+      toast(res.message || `ZORT: ${res.order.trackingNumber}`)
+      await refreshOrders()
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'เรียก ZORT ไม่สำเร็จ')
+    } finally {
+      setBusyId(null)
     }
   }
 
   return (
     <div className="admin-page">
       <h1>คำสั่งซื้อ</h1>
-      <p className="admin-page__sub">จัดการออเดอร์ทั้งระบบ · ใส่เลขพัสดุเมื่อจัดส่ง</p>
+      <p className="admin-page__sub">
+        จัดการออเดอร์ · เรียกขนส่ง ZORT เพื่อขอ Tracking / ใบปะหน้า
+        {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
+      </p>
       <div className="admin-card">
         <button
           type="button"
@@ -89,12 +116,33 @@ export function AdminOrdersPage() {
                           {order.carrier} · {order.trackingNumber}
                         </div>
                       ) : null}
+                      {order.shippingLabelUrl ? (
+                        <div>
+                          <a
+                            href={order.shippingLabelUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#ee4d2d', fontSize: 12 }}
+                          >
+                            ใบปะหน้า
+                          </a>
+                        </div>
+                      ) : null}
                     </td>
                     <td>
                       <div className="admin-actions">
+                        {order.status === 'to_ship' && zortReady ? (
+                          <button
+                            type="button"
+                            disabled={busyId === order.id}
+                            onClick={() => void shipWithZort(order.id)}
+                          >
+                            {busyId === order.id ? 'ZORT...' : 'เรียก ZORT'}
+                          </button>
+                        ) : null}
                         {advanceTo ? (
                           <button type="button" onClick={() => void advance(order.id, advanceTo)}>
-                            {advanceTo === 'shipping' ? 'จัดส่ง + เลขพัสดุ' : 'ไปขั้นถัดไป'}
+                            {advanceTo === 'shipping' ? 'ใส่เลขเอง' : 'ไปขั้นถัดไป'}
                           </button>
                         ) : null}
                         {order.status !== 'cancelled' && order.status !== 'completed' ? (
@@ -135,7 +183,7 @@ export function AdminOrdersPage() {
             className="admin-card"
             style={{ width: 'min(420px, 100%)', margin: 0, display: 'grid', gap: 10 }}
           >
-            <h2 style={{ margin: 0, fontSize: 18 }}>ใส่เลขพัสดุ</h2>
+            <h2 style={{ margin: 0, fontSize: 18 }}>ใส่เลขพัสดุเอง</h2>
             <label className="admin-form" style={{ display: 'grid', gap: 4 }}>
               บริษัทขนส่ง
               <input value={carrier} onChange={(e) => setCarrier(e.target.value)} />

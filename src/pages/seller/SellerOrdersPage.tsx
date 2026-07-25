@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatPrice } from '../../data/catalog'
+import { orderApi } from '../../api'
 import { statusLabel, useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
 import type { OrderStatus } from '../../api/types'
@@ -11,7 +12,7 @@ const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
   to_review: 'completed',
 }
 
-const carriers = ['Kerry Express', 'Flash Express', 'Thai Post', 'J&T Express', 'SPX']
+const carriers = ['Flash Express', 'Kerry Express', 'J&T Express', 'Thai Post', 'SPX']
 
 export function SellerOrdersPage() {
   const { orders, updateOrderStatus, refreshOrders } = useStore()
@@ -19,6 +20,15 @@ export function SellerOrdersPage() {
   const [shipOrderId, setShipOrderId] = useState<string | null>(null)
   const [trackingNumber, setTrackingNumber] = useState('')
   const [carrier, setCarrier] = useState(carriers[0])
+  const [zortReady, setZortReady] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  useEffect(() => {
+    void orderApi
+      .zortStatus()
+      .then((res) => setZortReady(res.configured))
+      .catch(() => setZortReady(false))
+  }, [])
 
   async function advance(orderId: string, status: OrderStatus) {
     if (status === 'shipping') {
@@ -41,15 +51,32 @@ export function SellerOrdersPage() {
       await updateOrderStatus(shipOrderId, 'shipping', { trackingNumber, carrier })
       toast('จัดส่งแล้ว · มีเลขพัสดุ')
       setShipOrderId(null)
+      await refreshOrders()
     } catch (error) {
       toast(error instanceof Error ? error.message : 'จัดส่งไม่สำเร็จ')
+    }
+  }
+
+  async function shipWithZort(orderId: string) {
+    setBusyId(orderId)
+    try {
+      const res = await orderApi.zortShip(orderId, { carrier: carriers[0] })
+      toast(res.message || `ZORT: ${res.order.trackingNumber}`)
+      await refreshOrders()
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'เรียก ZORT ไม่สำเร็จ')
+    } finally {
+      setBusyId(null)
     }
   }
 
   return (
     <div className="seller-page">
       <h1>ออเดอร์ร้าน</h1>
-      <p className="seller-page__sub">อัปเดตสถานะและใส่เลขพัสดุเมื่อจัดส่ง</p>
+      <p className="seller-page__sub">
+        อัปเดตสถานะ / เรียกขนส่ง ZORT เพื่อขอเลข Tracking และใบปะหน้า
+        {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
+      </p>
       <div className="seller-card">
         <button type="button" className="seller-btn ghost" onClick={() => void refreshOrders()}>
           รีเฟรช
@@ -90,17 +117,41 @@ export function SellerOrdersPage() {
                           {order.carrier} · {order.trackingNumber}
                         </div>
                       ) : null}
+                      {order.shippingLabelUrl ? (
+                        <div>
+                          <a
+                            href={order.shippingLabelUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#ee4d2d', fontSize: 12 }}
+                          >
+                            เปิดใบปะหน้า
+                          </a>
+                        </div>
+                      ) : null}
                     </td>
                     <td>
-                      {advanceTo ? (
-                        <button
-                          type="button"
-                          className="seller-btn"
-                          onClick={() => void advance(order.id, advanceTo)}
-                        >
-                          {advanceTo === 'shipping' ? 'จัดส่ง + เลขพัสดุ' : 'ไปขั้นถัดไป'}
-                        </button>
-                      ) : null}
+                      <div className="seller-actions" style={{ display: 'grid', gap: 6 }}>
+                        {order.status === 'to_ship' && zortReady ? (
+                          <button
+                            type="button"
+                            className="seller-btn"
+                            disabled={busyId === order.id}
+                            onClick={() => void shipWithZort(order.id)}
+                          >
+                            {busyId === order.id ? 'เรียก ZORT...' : 'เรียกขนส่ง ZORT'}
+                          </button>
+                        ) : null}
+                        {advanceTo ? (
+                          <button
+                            type="button"
+                            className="seller-btn ghost"
+                            onClick={() => void advance(order.id, advanceTo)}
+                          >
+                            {advanceTo === 'shipping' ? 'ใส่เลขพัสดุเอง' : 'ไปขั้นถัดไป'}
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -113,7 +164,7 @@ export function SellerOrdersPage() {
       {shipOrderId ? (
         <div className="seller-modal" role="dialog" aria-modal="true">
           <div className="seller-modal__panel">
-            <h2>ใส่เลขพัสดุ</h2>
+            <h2>ใส่เลขพัสดุเอง</h2>
             <p>ออเดอร์ {shipOrderId}</p>
             <label>
               บริษัทขนส่ง
