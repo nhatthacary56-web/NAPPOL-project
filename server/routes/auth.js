@@ -220,7 +220,7 @@ router.post('/oauth/google', async (req, res) => {
       googleId = String(info.sub)
       email = String(info.email || '').toLowerCase()
       name = String(info.name || info.email || 'Google User')
-    } else if (providers.demoSocial) {
+    } else if (providers.demoSocial && !providers.googleClientId) {
       email = String(demoEmail || 'buyer.google@gmail.com').toLowerCase()
       name = String(demoName || 'Google Buyer')
       googleId = `demo_google_${email}`
@@ -298,11 +298,19 @@ router.post('/oauth/line', async (req, res) => {
         lineId = String(profile.sub)
         name = String(profile.name || 'LINE User')
       }
-    } else if (providers.demoSocial) {
+    } else if (providers.demoSocial && !providers.lineChannelId) {
       lineId = 'demo_line_user'
       name = String(demoName || 'LINE Buyer')
+    } else if (providers.lineChannelId && !providers.lineChannelSecret) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ใส่ LINE_CHANNEL_SECRET ใน Render ด้วย แล้ว Deploy ใหม่',
+      })
     } else {
-      return res.status(400).json({ ok: false, message: 'ยังไม่ได้ตั้งค่า LINE Login' })
+      return res.status(400).json({
+        ok: false,
+        message: 'LINE ยังไม่พร้อม — Deploy โค้ดล่าสุดแล้วลองใหม่',
+      })
     }
 
     const user = upsertSocialUser({
