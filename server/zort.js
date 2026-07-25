@@ -8,7 +8,7 @@ export function isZortConfigured() {
   )
 }
 
-function zortHeaders() {
+function zortHeaders(extra = {}) {
   if (!isZortConfigured()) {
     const err = new Error('ยังไม่ได้ตั้งค่า ZORT (ZORT_STORENAME / ZORT_API_KEY / ZORT_API_SECRET)')
     err.code = 'ZORT_NOT_CONFIGURED'
@@ -20,10 +20,11 @@ function zortHeaders() {
     apisecret: String(process.env.ZORT_API_SECRET).trim(),
     'Content-Type': 'application/json',
     'X-Request-ID': randomUUID(),
+    ...extra,
   }
 }
 
-async function zortRequest(method, path, { query, body } = {}) {
+async function zortRequest(method, path, { query, body, headerExtras } = {}) {
   const url = new URL(`${BASE}${path}`)
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -34,7 +35,7 @@ async function zortRequest(method, path, { query, body } = {}) {
   }
   const res = await fetch(url, {
     method,
-    headers: zortHeaders(),
+    headers: zortHeaders(headerExtras),
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
   const text = await res.text()
@@ -49,9 +50,8 @@ async function zortRequest(method, path, { query, body } = {}) {
   }
   const code = String(json?.res?.resCode ?? json?.resCode ?? res.status)
   if (!res.ok || (code && code !== '200')) {
-    const err = new Error(
-      json?.res?.resDesc || json?.resDesc || json?.message || `ZORT error ${code}`,
-    )
+    const desc = json?.res?.resDesc || json?.resDesc || json?.message || `ZORT error ${code}`
+    const err = new Error(desc)
     err.code = 'ZORT_API'
     err.resCode = code
     err.detail = json
@@ -69,7 +69,8 @@ export function toZortShipment(carrier) {
   if (raw.includes('post') || raw.includes('ไปรษณีย์')) return 'thailandpost'
   if (raw.includes('dhl')) return 'dhl'
   if (raw.includes('spx') || raw.includes('shopee')) return 'shopeeexpress'
-  return String(process.env.ZORT_DEFAULT_SHIPMENT || 'flashexpress')
+  // Kerry is registered on this ZORT store; Flash is not.
+  return String(process.env.ZORT_DEFAULT_SHIPMENT || 'kerry').toLowerCase()
 }
 
 export function carrierLabelFromZort(code) {
@@ -90,8 +91,12 @@ function fullAddress(address) {
     .join(' ')
 }
 
+function orderNumberFor(order) {
+  return order.zortOrderNumber || `GA-${order.id}`
+}
+
 export function buildZortOrderPayload(order) {
-  const number = `GA-${order.id}`
+  const number = orderNumberFor(order)
   const amount = Number(order.total) || 0
   const shippingamount = Number(order.shippingFee) || 0
   const list = (order.items || []).map((item, index) => {
@@ -113,7 +118,6 @@ export function buildZortOrderPayload(order) {
     }
   })
 
-  // ZORT requires product lines; for shipping-only we still send cart lines (no stock sync).
   if (!list.length) {
     list.push({
       sku: 'SHIPPING',
@@ -156,45 +160,100 @@ export function buildZortOrderPayload(order) {
 
 export function buildBookShipmentBody(order, shopProfile = {}) {
   const addr = order.address || {}
+  // ZORT rejects empty sender fields — fall back to env / safe defaults.
+  const senderName =
+    shopProfile.name || process.env.ZORT_SENDER_NAME || 'Great App Shop'
+  const senderPhone =
+    shopProfile.phone || process.env.ZORT_SENDER_PHONE || '0812345678'
+  const senderEmail =
+    shopProfile.email || process.env.ZORT_SENDER_EMAIL || process.env.ZORT_STORENAME || ''
+  const senderAddress =
+    shopProfile.address ||
+    process.env.ZORT_SENDER_ADDRESS ||
+    '99 ถนนพระราม 9'
+  const senderDistrict =
+    shopProfile.district || process.env.ZORT_SENDER_DISTRICT || 'ห้วยขวาง'
+  const senderCity = shopProfile.city || process.env.ZORT_SENDER_CITY || 'ห้วยขวาง'
+  const senderProvince =
+    shopProfile.province || process.env.ZORT_SENDER_PROVINCE || 'กรุงเทพมหานคร'
+  const senderPostcode =
+    shopProfile.postcode || process.env.ZORT_SENDER_POSTCODE || '10310'
+
   return {
-    senderName: shopProfile.name || process.env.ZORT_SENDER_NAME || 'Great App',
-    senderPhone: shopProfile.phone || process.env.ZORT_SENDER_PHONE || '',
-    senderEmail: shopProfile.email || process.env.ZORT_SENDER_EMAIL || '',
-    senderAddress: shopProfile.address || process.env.ZORT_SENDER_ADDRESS || '',
-    senderDistrict: shopProfile.district || process.env.ZORT_SENDER_DISTRICT || '',
-    senderCity: shopProfile.city || process.env.ZORT_SENDER_CITY || '',
-    senderProvince: shopProfile.province || process.env.ZORT_SENDER_PROVINCE || '',
-    senderPostcode: shopProfile.postcode || process.env.ZORT_SENDER_POSTCODE || '',
-    recipientName: addr.name || '',
+    senderName,
+    senderPhone,
+    senderEmail,
+    senderAddress,
+    senderDistrict,
+    senderCity,
+    senderProvince,
+    senderPostcode,
+    recipientName: addr.name || 'ลูกค้า',
     recipientPhone: addr.phone || '',
     recipientEmail: '',
-    recipientAddress: addr.line1 || '',
-    recipientDistrict: addr.district || '',
-    recipientCity: addr.district || '',
-    recipientProvince: addr.province || '',
-    recipientPostcode: addr.postalCode || '',
+    recipientAddress: addr.line1 || fullAddress(addr) || 'ที่อยู่จัดส่ง',
+    recipientDistrict: addr.district || 'ไม่ระบุ',
+    recipientCity: addr.district || 'ไม่ระบุ',
+    recipientProvince: addr.province || 'กรุงเทพมหานคร',
+    recipientPostcode: addr.postalCode || '10000',
     codAmount: order.paymentMethod === 'cod' ? Number(order.total) || 0 : 0,
     parcelWeight: Number(process.env.ZORT_DEFAULT_WEIGHT_G || 500),
   }
 }
 
+export async function findOrderByNumber(number) {
+  const json = await zortRequest('GET', '/Order/GetOrders', {
+    query: { page: 1, limit: 5 },
+    headerExtras: { numberlist: number },
+  })
+  const list = json?.list || []
+  const hit = list.find((o) => String(o.number) === String(number)) || list[0]
+  if (!hit) return null
+  return {
+    zortOrderId: hit.id,
+    zortOrderNumber: hit.number,
+    trackingNumber: hit.trackingno || hit.trackingList?.[0]?.trackingno || null,
+    carrier: carrierLabelFromZort(hit.shippingchannel || hit.trackingList?.[0]?.shippingchannel),
+    shippingLabelUrl: null,
+    raw: hit,
+  }
+}
+
 export async function addOrder(order) {
   const payload = buildZortOrderPayload(order)
-  const json = await zortRequest('POST', '/Order/AddOrder', {
-    query: { uniquenumber: order.id, link: 0 },
-    body: payload,
-  })
-  return {
-    zortOrderId: json?.detail?.id ?? json?.res?.detail?.id,
-    zortOrderNumber: payload.number,
-    raw: json,
+  try {
+    const json = await zortRequest('POST', '/Order/AddOrder', {
+      query: { uniquenumber: order.id, link: 0 },
+      body: payload,
+    })
+    return {
+      zortOrderId: json?.detail?.id ?? json?.res?.detail?.id,
+      zortOrderNumber: payload.number,
+      raw: json,
+    }
+  } catch (error) {
+    const msg = String(error.message || '')
+    if (/duplicat/i.test(msg) || error.resCode === '100') {
+      const existing = await findOrderByNumber(payload.number)
+      if (existing?.zortOrderId) {
+        return {
+          zortOrderId: existing.zortOrderId,
+          zortOrderNumber: existing.zortOrderNumber,
+          trackingNumber: existing.trackingNumber,
+          carrier: existing.carrier,
+          reused: true,
+          raw: existing.raw,
+        }
+      }
+    }
+    throw error
   }
 }
 
 export async function bookOrderShipment(order, { shipment, shopProfile } = {}) {
   const shipmentCode = toZortShipment(shipment)
   const id = order.zortOrderId
-  const number = order.zortOrderNumber || `GA-${order.id}`
+  const number = orderNumberFor(order)
   const json = await zortRequest('POST', '/Order/BookOrderShipment', {
     query: {
       ...(id ? { id } : { number }),
@@ -218,7 +277,7 @@ export async function bookOrderShipment(order, { shipment, shopProfile } = {}) {
 export async function getShipmentLabels(order) {
   const query = order.zortOrderId
     ? { orderidlist: String(order.zortOrderId) }
-    : { numberlist: order.zortOrderNumber || `GA-${order.id}` }
+    : { numberlist: orderNumberFor(order) }
   const json = await zortRequest('GET', '/Order/GetShipmentLabels', { query })
   const list = Array.isArray(json) ? json : json?.list || json?.detail || []
   const first = Array.isArray(list) ? list[0] : null
@@ -231,19 +290,77 @@ export async function getShipmentLabels(order) {
   }
 }
 
+async function bookWithFallback(order, { carrier, shopProfile }) {
+  const preferred = toZortShipment(carrier)
+  const fallbacks = [
+    preferred,
+    'kerry',
+    'thailandpost',
+    'flashexpress',
+    'jtexpress',
+  ].filter((v, i, arr) => arr.indexOf(v) === i)
+
+  let lastError
+  for (const shipment of fallbacks) {
+    try {
+      return await bookOrderShipment(order, { shipment, shopProfile })
+    } catch (error) {
+      lastError = error
+      const msg = String(error.message || '')
+      // Try next provider when account/integration is missing.
+      if (
+        /AccountNotRegistered|UnsupportedPartner|NotEnoughPoint|LogisticsGatewayError|Invalid Sender|Invalid Address/i.test(
+          msg,
+        )
+      ) {
+        continue
+      }
+      throw error
+    }
+  }
+  throw lastError || new Error('เรียกขนส่ง ZORT ไม่สำเร็จ')
+}
+
 export async function createShipmentForOrder(order, { carrier, shopProfile } = {}) {
   let zortOrderId = order.zortOrderId
-  let zortOrderNumber = order.zortOrderNumber || `GA-${order.id}`
+  let zortOrderNumber = orderNumberFor(order)
+  let existingTracking = order.trackingNumber || null
+  let existingCarrier = order.carrier || null
 
   if (!zortOrderId) {
     const created = await addOrder(order)
     zortOrderId = created.zortOrderId
     zortOrderNumber = created.zortOrderNumber
+    if (created.trackingNumber) {
+      existingTracking = created.trackingNumber
+      existingCarrier = created.carrier
+    }
   }
 
-  const booked = await bookOrderShipment(
+  if (existingTracking) {
+    let shippingLabelUrl = order.shippingLabelUrl || null
+    try {
+      const labels = await getShipmentLabels({
+        ...order,
+        zortOrderId,
+        zortOrderNumber,
+      })
+      shippingLabelUrl = labels.shippingLabelUrl || shippingLabelUrl
+    } catch {
+      // ignore
+    }
+    return {
+      zortOrderId,
+      zortOrderNumber,
+      trackingNumber: existingTracking,
+      carrier: existingCarrier || carrierLabelFromZort(toZortShipment(carrier)),
+      shippingLabelUrl,
+    }
+  }
+
+  const booked = await bookWithFallback(
     { ...order, zortOrderId, zortOrderNumber },
-    { shipment: carrier, shopProfile },
+    { carrier, shopProfile },
   )
 
   let shippingLabelUrl = booked.shippingLabelUrl

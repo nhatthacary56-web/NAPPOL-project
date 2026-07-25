@@ -12,7 +12,7 @@ const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
   to_review: 'completed',
 }
 
-const carriers = ['Flash Express', 'Kerry Express', 'J&T Express', 'Thai Post', 'SPX']
+const carriers = ['Kerry Express', 'Flash Express', 'J&T Express', 'Thai Post', 'SPX']
 
 export function SellerOrdersPage() {
   const { orders, updateOrderStatus, refreshOrders } = useStore()
@@ -60,7 +60,7 @@ export function SellerOrdersPage() {
   async function shipWithZort(orderId: string) {
     setBusyId(orderId)
     try {
-      const res = await orderApi.zortShip(orderId, { carrier: carriers[0] })
+      const res = await orderApi.zortShip(orderId, { carrier: 'Kerry Express' })
       toast(res.message || `ZORT: ${res.order.trackingNumber}`)
       await refreshOrders()
     } catch (error) {

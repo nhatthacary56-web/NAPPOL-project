@@ -18,7 +18,7 @@ export function AdminOrdersPage() {
   const { toast } = useToast()
   const [shipOrderId, setShipOrderId] = useState<string | null>(null)
   const [trackingNumber, setTrackingNumber] = useState('')
-  const [carrier, setCarrier] = useState('Flash Express')
+  const [carrier, setCarrier] = useState('Kerry Express')
   const [zortReady, setZortReady] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -33,7 +33,7 @@ export function AdminOrdersPage() {
     if (status === 'shipping') {
       setShipOrderId(orderId)
       setTrackingNumber('')
-      setCarrier('Flash Express')
+      setCarrier('Kerry Express')
       return
     }
     try {
@@ -59,7 +59,7 @@ export function AdminOrdersPage() {
   async function shipWithZort(orderId: string) {
     setBusyId(orderId)
     try {
-      const res = await orderApi.zortShip(orderId, { carrier: 'Flash Express' })
+      const res = await orderApi.zortShip(orderId, { carrier: 'Kerry Express' })
       toast(res.message || `ZORT: ${res.order.trackingNumber}`)
       await refreshOrders()
     } catch (error) {
