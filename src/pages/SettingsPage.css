@@ -1,40 +1,140 @@
 .settings-page {
-  padding: 16px;
-  background: var(--surface);
+  padding: 12px;
+  background: var(--bg, #f5f5f5);
   min-height: calc(100dvh - var(--header-height));
-}
-
-.settings-page form {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
-.settings-page label {
+.settings-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #eceff3);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.settings-card h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.settings-hint {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  line-height: 1.45;
+}
+
+.settings-card form,
+.settings-inline-form {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-card label {
   display: grid;
   gap: 6px;
   font-size: 13px;
   color: var(--text-secondary);
 }
 
-.settings-page input {
+.settings-card input {
   min-height: 42px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 0 12px;
+  font: inherit;
 }
 
-.settings-page input:disabled {
+.settings-card input:disabled {
   background: var(--bg);
-  color: var(--text-muted);
+  color: var(--text-muted, #9ca3af);
 }
 
-.settings-page button {
-  margin-top: 8px;
-  min-height: 44px;
+.settings-card button,
+.settings-inline-form button {
+  min-height: 42px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--brand);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
+  font: inherit;
   cursor: pointer;
+}
+
+.settings-card button.ghost {
+  background: #fff;
+  color: var(--brand);
+  border: 1px solid color-mix(in srgb, var(--brand) 40%, #d1d5db);
+  padding: 0 12px;
+  min-height: 36px;
+  font-size: 13px;
+}
+
+.settings-card button:disabled {
+  opacity: 0.6;
+}
+
+.settings-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border, #eceff3);
+}
+
+.settings-link-row:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.settings-link-row strong {
+  display: block;
+  font-size: 14px;
+}
+
+.settings-link-row em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.settings-link-row .ok,
+.settings-link-row .warn {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settings-link-row .ok {
+  color: #15803d;
+}
+
+.settings-link-row .warn {
+  color: #b45309;
+}
+
+.settings-links {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.settings-links a {
+  display: block;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #eceff3);
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.settings-links a:last-child {
+  border-bottom: 0;
 }

@@ -44,6 +44,113 @@ function issueSession(user) {
   return { ok: true, token: signToken(user), user: publicUser(user) }
 }
 
+function loginMethodCount(user) {
+  let n = 0
+  if (user.passwordHash && (user.passwordSet === true || !['google', 'line', 'phone'].includes(user.authProvider))) {
+    n += 1
+  }
+  if (user.googleId) n += 1
+  if (user.lineId) n += 1
+  if (user.phone) n += 1
+  return n
+}
+
+function dbUser(req) {
+  return getDb().users.find((u) => u.id === req.user.id)
+}
+
+async function resolveGoogleIdentity(body) {
+  const providers = authProviders()
+  const { credential, demoEmail, demoName } = body ?? {}
+  if (credential) {
+    const infoRes = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+    )
+    const info = await infoRes.json()
+    if (!infoRes.ok || !info.sub) {
+      throw Object.assign(new Error('ยืนยัน Google ไม่สำเร็จ'), { status: 401 })
+    }
+    if (providers.googleClientId && info.aud !== providers.googleClientId) {
+      throw Object.assign(new Error('Google Client ID ไม่ตรงกัน'), { status: 401 })
+    }
+    return {
+      googleId: String(info.sub),
+      email: String(info.email || '').toLowerCase(),
+      name: String(info.name || info.email || 'Google User'),
+    }
+  }
+  if (providers.demoSocial && !providers.googleClientId) {
+    const email = String(demoEmail || 'buyer.google@gmail.com').toLowerCase()
+    return {
+      googleId: `demo_google_${email}`,
+      email,
+      name: String(demoName || 'Google Buyer'),
+    }
+  }
+  throw Object.assign(new Error('ยังไม่ได้ตั้งค่า GOOGLE_CLIENT_ID'), { status: 400 })
+}
+
+async function resolveLineIdentity(body) {
+  const providers = authProviders()
+  const { accessToken, code, demoName } = body ?? {}
+  let token = accessToken
+  let lineId = ''
+  let name = ''
+
+  if (!token && code) {
+    if (!providers.lineChannelId || !providers.lineChannelSecret || !providers.lineRedirectUri) {
+      throw Object.assign(new Error('ยังไม่ได้ตั้งค่า LINE Login ให้ครบ'), { status: 400 })
+    }
+    const form = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: String(code),
+      redirect_uri: providers.lineRedirectUri,
+      client_id: providers.lineChannelId,
+      client_secret: providers.lineChannelSecret,
+    })
+    const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form,
+    })
+    const tokenJson = await tokenRes.json()
+    if (!tokenRes.ok || !tokenJson.access_token) {
+      throw Object.assign(
+        new Error(tokenJson.error_description || tokenJson.error || 'แลกโค้ด LINE ไม่สำเร็จ'),
+        { status: 401 },
+      )
+    }
+    token = tokenJson.access_token
+  }
+
+  if (token) {
+    const verifyRes = await fetch('https://api.line.me/oauth2/v2.1/userinfo', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const profile = await verifyRes.json()
+    if (!verifyRes.ok || !profile.sub) {
+      const profileRes = await fetch('https://api.line.me/v2/profile', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const basic = await profileRes.json()
+      if (!profileRes.ok || !basic.userId) {
+        throw Object.assign(new Error('ยืนยัน LINE ไม่สำเร็จ'), { status: 401 })
+      }
+      lineId = String(basic.userId)
+      name = String(basic.displayName || 'LINE User')
+    } else {
+      lineId = String(profile.sub)
+      name = String(profile.name || 'LINE User')
+    }
+    return { lineId, name }
+  }
+
+  if (providers.demoSocial && !providers.lineChannelId) {
+    return { lineId: `demo_line_${Date.now()}`, name: String(demoName || 'LINE Buyer') }
+  }
+  throw Object.assign(new Error('LINE ยังไม่พร้อม'), { status: 400 })
+}
+
 function ensureBuyerByPhone(phone, name) {
   const db = getDb()
   const normalized = normalizePhone(phone)
@@ -142,6 +249,7 @@ router.post('/register', (req, res) => {
     email: email.trim().toLowerCase(),
     phone: normalized,
     passwordHash: bcrypt.hashSync(password, 10),
+    passwordSet: true,
     role: allowed,
     coins: allowed === 'buyer' ? 100 : 50,
     authProvider: 'email',
@@ -377,6 +485,134 @@ router.patch('/me', requireAuth, (req, res) => {
   if (req.body.phone) user.phone = normalizePhone(req.body.phone)
   persist()
   res.json({ ok: true, user: publicUser(user) })
+})
+
+router.post('/link/google', requireAuth, async (req, res) => {
+  try {
+    const user = dbUser(req)
+    if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
+    if (user.googleId) {
+      return res.status(400).json({ ok: false, message: 'เชื่อม Google ไว้แล้ว' })
+    }
+    const identity = await resolveGoogleIdentity(req.body)
+    const taken = findUserByGoogleId(identity.googleId)
+    if (taken && taken.id !== user.id) {
+      return res.status(409).json({ ok: false, message: 'Google นี้ถูกใช้กับบัญชีอื่นแล้ว' })
+    }
+    user.googleId = identity.googleId
+    if (identity.name && (!user.name || user.name.startsWith('ผู้ใช้ '))) user.name = identity.name
+    persist()
+    res.json({ ok: true, user: publicUser(user), message: 'เชื่อม Google สำเร็จ' })
+  } catch (error) {
+    res.status(error?.status || 500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'เชื่อม Google ไม่สำเร็จ',
+    })
+  }
+})
+
+router.post('/unlink/google', requireAuth, (req, res) => {
+  const user = dbUser(req)
+  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
+  if (!user.googleId) {
+    return res.status(400).json({ ok: false, message: 'ยังไม่ได้เชื่อม Google' })
+  }
+  if (loginMethodCount(user) <= 1) {
+    return res.status(400).json({
+      ok: false,
+      message: 'ต้องเหลืออย่างน้อย 1 ช่องทางเข้าสู่ระบบ',
+    })
+  }
+  delete user.googleId
+  persist()
+  res.json({ ok: true, user: publicUser(user), message: 'ยกเลิกเชื่อม Google แล้ว' })
+})
+
+router.post('/link/line', requireAuth, async (req, res) => {
+  try {
+    const user = dbUser(req)
+    if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
+    if (user.lineId) {
+      return res.status(400).json({ ok: false, message: 'เชื่อม LINE ไว้แล้ว' })
+    }
+    const identity = await resolveLineIdentity(req.body)
+    const taken = findUserByLineId(identity.lineId)
+    if (taken && taken.id !== user.id) {
+      return res.status(409).json({ ok: false, message: 'LINE นี้ถูกใช้กับบัญชีอื่นแล้ว' })
+    }
+    user.lineId = identity.lineId
+    if (identity.name && (!user.name || user.name.startsWith('ผู้ใช้ '))) user.name = identity.name
+    persist()
+    res.json({ ok: true, user: publicUser(user), message: 'เชื่อม LINE สำเร็จ' })
+  } catch (error) {
+    res.status(error?.status || 500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'เชื่อม LINE ไม่สำเร็จ',
+    })
+  }
+})
+
+router.post('/unlink/line', requireAuth, (req, res) => {
+  const user = dbUser(req)
+  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
+  if (!user.lineId) {
+    return res.status(400).json({ ok: false, message: 'ยังไม่ได้เชื่อม LINE' })
+  }
+  if (loginMethodCount(user) <= 1) {
+    return res.status(400).json({
+      ok: false,
+      message: 'ต้องเหลืออย่างน้อย 1 ช่องทางเข้าสู่ระบบ',
+    })
+  }
+  delete user.lineId
+  persist()
+  res.json({ ok: true, user: publicUser(user), message: 'ยกเลิกเชื่อม LINE แล้ว' })
+})
+
+router.post('/link/phone', requireAuth, (req, res) => {
+  const user = dbUser(req)
+  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
+  const phone = normalizePhone(req.body?.phone)
+  const code = String(req.body?.code || '').trim()
+  if (!phone || !code) {
+    return res.status(400).json({ ok: false, message: 'กรอกเบอร์และรหัส OTP' })
+  }
+  const db = getDb()
+  const entry = (db.otpCodes || []).find((o) => o.phone === phone)
+  if (!entry || entry.code !== code || entry.expiresAt < Date.now()) {
+    return res.status(401).json({ ok: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' })
+  }
+  const taken = findUserByPhone(phone)
+  if (taken && taken.id !== user.id) {
+    return res.status(409).json({ ok: false, message: 'เบอร์นี้ถูกใช้กับบัญชีอื่นแล้ว' })
+  }
+  db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
+  user.phone = phone
+  persist()
+  res.json({ ok: true, user: publicUser(user), message: 'เชื่อมเบอร์โทรสำเร็จ' })
+})
+
+router.post('/password', requireAuth, (req, res) => {
+  const user = dbUser(req)
+  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
+  const { currentPassword, newPassword } = req.body ?? {}
+  if (!newPassword || String(newPassword).length < 6) {
+    return res.status(400).json({ ok: false, message: 'รหัสผ่านใหม่ต้องอย่างน้อย 6 ตัวอักษร' })
+  }
+  const hasRealPassword =
+    user.passwordHash && (user.passwordSet === true || !['google', 'line', 'phone'].includes(user.authProvider))
+  if (hasRealPassword) {
+    if (!currentPassword || !bcrypt.compareSync(String(currentPassword), user.passwordHash)) {
+      return res.status(401).json({ ok: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' })
+    }
+  }
+  user.passwordHash = bcrypt.hashSync(String(newPassword), 10)
+  user.passwordSet = true
+  if (!user.authProvider || ['google', 'line', 'phone'].includes(user.authProvider)) {
+    user.authProvider = 'email'
+  }
+  persist()
+  res.json({ ok: true, user: publicUser(user), message: 'ตั้งรหัสผ่านสำเร็จ' })
 })
 
 export default router

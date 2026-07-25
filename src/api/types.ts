@@ -9,6 +9,10 @@ export type ApiUser = {
   coins: number
   banned?: boolean
   createdAt?: string
+  hasPassword?: boolean
+  googleLinked?: boolean
+  lineLinked?: boolean
+  authProvider?: string
 }
 
 export type ShopCategory = {

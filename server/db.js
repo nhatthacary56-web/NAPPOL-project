@@ -729,8 +729,15 @@ export async function flushPersist() {
 
 export function publicUser(user) {
   if (!user) return null
-  const { passwordHash, ...safe } = user
-  return safe
+  const { passwordHash, googleId, lineId, ...rest } = user
+  const socialAuth = ['google', 'line', 'phone'].includes(user.authProvider)
+  return {
+    ...rest,
+    hasPassword: Boolean(passwordHash) && (user.passwordSet === true || !socialAuth),
+    googleLinked: Boolean(googleId),
+    lineLinked: Boolean(lineId),
+    authProvider: user.authProvider || (passwordHash ? 'email' : 'phone'),
+  }
 }
 
 export function findUserByEmail(email) {

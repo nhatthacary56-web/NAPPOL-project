@@ -81,6 +81,30 @@ export const authApi = {
   me: () => api<{ ok: true; user: ApiUser; shop: Shop | null }>('/auth/me'),
   updateMe: (body: Partial<Pick<ApiUser, 'name' | 'phone'>>) =>
     api<{ ok: true; user: ApiUser }>('/auth/me', { method: 'PATCH', json: body }),
+  linkGoogle: (body: { credential?: string; demoEmail?: string; demoName?: string }) =>
+    api<{ ok: true; user: ApiUser; message?: string }>('/auth/link/google', {
+      method: 'POST',
+      json: body,
+    }),
+  unlinkGoogle: () =>
+    api<{ ok: true; user: ApiUser; message?: string }>('/auth/unlink/google', { method: 'POST' }),
+  linkLine: (body: { accessToken?: string; code?: string; demoName?: string }) =>
+    api<{ ok: true; user: ApiUser; message?: string }>('/auth/link/line', {
+      method: 'POST',
+      json: body,
+    }),
+  unlinkLine: () =>
+    api<{ ok: true; user: ApiUser; message?: string }>('/auth/unlink/line', { method: 'POST' }),
+  linkPhone: (phone: string, code: string) =>
+    api<{ ok: true; user: ApiUser; message?: string }>('/auth/link/phone', {
+      method: 'POST',
+      json: { phone, code },
+    }),
+  setPassword: (body: { currentPassword?: string; newPassword: string }) =>
+    api<{ ok: true; user: ApiUser; message?: string }>('/auth/password', {
+      method: 'POST',
+      json: body,
+    }),
   logout: () => setToken(null),
 }
 

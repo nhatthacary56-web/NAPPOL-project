@@ -134,6 +134,24 @@ type StoreContextValue = {
   adminLogin: (username: string, password: string) => Promise<{ ok: boolean; message: string }>
   adminLogout: () => void
   listUsers: () => Promise<ApiUser[]>
+
+  linkGoogle: (payload?: {
+    credential?: string
+    demoEmail?: string
+    demoName?: string
+  }) => Promise<{ ok: boolean; message: string }>
+  unlinkGoogle: () => Promise<{ ok: boolean; message: string }>
+  linkLine: (payload?: {
+    accessToken?: string
+    code?: string
+    demoName?: string
+  }) => Promise<{ ok: boolean; message: string }>
+  unlinkLine: () => Promise<{ ok: boolean; message: string }>
+  linkPhone: (phone: string, code: string) => Promise<{ ok: boolean; message: string }>
+  setPassword: (body: {
+    currentPassword?: string
+    newPassword: string
+  }) => Promise<{ ok: boolean; message: string }>
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null)
@@ -515,6 +533,93 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setUser(res.user)
   }, [])
 
+  const linkGoogle = useCallback(
+    async (payload?: { credential?: string; demoEmail?: string; demoName?: string }) => {
+      try {
+        const res = await authApi.linkGoogle(payload || {})
+        setUser(res.user)
+        return { ok: true, message: res.message || 'เชื่อม Google สำเร็จ' }
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : 'เชื่อม Google ไม่สำเร็จ',
+        }
+      }
+    },
+    [],
+  )
+
+  const unlinkGoogle = useCallback(async () => {
+    try {
+      const res = await authApi.unlinkGoogle()
+      setUser(res.user)
+      return { ok: true, message: res.message || 'ยกเลิกเชื่อม Google แล้ว' }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'ยกเลิกไม่สำเร็จ',
+      }
+    }
+  }, [])
+
+  const linkLine = useCallback(
+    async (payload?: { accessToken?: string; code?: string; demoName?: string }) => {
+      try {
+        const res = await authApi.linkLine(payload || {})
+        setUser(res.user)
+        return { ok: true, message: res.message || 'เชื่อม LINE สำเร็จ' }
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : 'เชื่อม LINE ไม่สำเร็จ',
+        }
+      }
+    },
+    [],
+  )
+
+  const unlinkLine = useCallback(async () => {
+    try {
+      const res = await authApi.unlinkLine()
+      setUser(res.user)
+      return { ok: true, message: res.message || 'ยกเลิกเชื่อม LINE แล้ว' }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'ยกเลิกไม่สำเร็จ',
+      }
+    }
+  }, [])
+
+  const linkPhone = useCallback(async (phone: string, code: string) => {
+    try {
+      const res = await authApi.linkPhone(phone, code)
+      setUser(res.user)
+      return { ok: true, message: res.message || 'เชื่อมเบอร์สำเร็จ' }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'เชื่อมเบอร์ไม่สำเร็จ',
+      }
+    }
+  }, [])
+
+  const setPassword = useCallback(
+    async (body: { currentPassword?: string; newPassword: string }) => {
+      try {
+        const res = await authApi.setPassword(body)
+        setUser(res.user)
+        return { ok: true, message: res.message || 'ตั้งรหัสผ่านสำเร็จ' }
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : 'ตั้งรหัสผ่านไม่สำเร็จ',
+        }
+      }
+    },
+    [],
+  )
+
   const addToCart = useCallback(
     (productId: string, qty = 1, variant?: { id: string; name: string } | null) => {
       const variantId = variant?.id || null
@@ -814,6 +919,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       updateProfile,
+      linkGoogle,
+      unlinkGoogle,
+      linkLine,
+      unlinkLine,
+      linkPhone,
+      setPassword,
       refreshSession,
       cart,
       cartCount,
@@ -874,6 +985,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       updateProfile,
+      linkGoogle,
+      unlinkGoogle,
+      linkLine,
+      unlinkLine,
+      linkPhone,
+      setPassword,
       refreshSession,
       cart,
       cartCount,
