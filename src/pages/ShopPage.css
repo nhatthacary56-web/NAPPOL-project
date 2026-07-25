@@ -24,6 +24,15 @@
   opacity: 0.85 !important;
 }
 
+.shop-page__vacation {
+  margin-top: 10px !important;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  font-weight: 600;
+  opacity: 1 !important;
+}
+
 .shop-page__cats {
   display: flex;
   gap: 8px;

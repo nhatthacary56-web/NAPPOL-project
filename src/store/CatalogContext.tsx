@@ -90,6 +90,10 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       setAppContent({
         ...defaultAppContent,
         ...res.appContent,
+        seller: {
+          ...defaultAppContent.seller,
+          ...res.appContent.seller,
+        },
         help: {
           ...defaultAppContent.help,
           ...res.appContent.help,

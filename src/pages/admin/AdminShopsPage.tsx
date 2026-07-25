@@ -20,7 +20,9 @@ export function AdminShopsPage() {
   return (
     <div className="admin-page">
       <h1>ร้านค้า / พ่อค้าแม่ค้า</h1>
-      <p className="admin-page__sub">อนุมัติร้านเพื่อให้ลงสินค้าและขายบนแพลตฟอร์มได้</p>
+      <p className="admin-page__sub">
+        อนุมัติร้านเพื่อให้ลงสินค้าและขายบนแพลตฟอร์มได้ · เห็นสถานะโหมดพักร้อนที่ร้านเปิดเอง
+      </p>
       <div className="admin-card">
         <table className="admin-table">
           <thead>
@@ -28,6 +30,7 @@ export function AdminShopsPage() {
               <th>ชื่อร้าน</th>
               <th>slug</th>
               <th>สถานะ</th>
+              <th>พักร้อน</th>
               <th></th>
             </tr>
           </thead>
@@ -40,6 +43,13 @@ export function AdminShopsPage() {
                 </td>
                 <td>{shop.slug}</td>
                 <td>{shop.status}</td>
+                <td>
+                  {shop.vacationMode ? (
+                    <span style={{ color: '#b91c1c', fontWeight: 700 }}>เปิดอยู่</span>
+                  ) : (
+                    <span style={{ color: '#6b7280' }}>—</span>
+                  )}
+                </td>
                 <td>
                   <div className="admin-actions">
                     {shop.status !== 'active' ? (
@@ -78,6 +88,19 @@ export function AdminShopsPage() {
                         }}
                       >
                         ปฏิเสธ
+                      </button>
+                    ) : null}
+                    {shop.vacationMode ? (
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={async () => {
+                          await shopApi.setVacation(shop.id, false)
+                          toast('ปิดโหมดพักร้อนให้ร้านแล้ว')
+                          await reload()
+                        }}
+                      >
+                        ปิดพักร้อน
                       </button>
                     ) : null}
                   </div>

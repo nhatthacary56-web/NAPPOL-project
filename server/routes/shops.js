@@ -64,6 +64,7 @@ router.post('/register', requireAuth, (req, res) => {
     description: description?.trim() || '',
     location: location?.trim() || 'ไทย',
     status: req.user.role === 'admin' ? 'active' : 'pending',
+    vacationMode: false,
     shopCategories: [],
     createdAt: new Date().toISOString(),
   }
@@ -82,7 +83,9 @@ router.patch('/mine', requireRole('seller', 'admin'), (req, res) => {
   if (req.body.name) shop.name = String(req.body.name).trim()
   if (req.body.description !== undefined) shop.description = String(req.body.description).trim()
   if (req.body.location) shop.location = String(req.body.location).trim()
+  if (req.body.vacationMode !== undefined) shop.vacationMode = Boolean(req.body.vacationMode)
   if (!Array.isArray(shop.shopCategories)) shop.shopCategories = []
+  if (shop.vacationMode == null) shop.vacationMode = false
   persist()
   res.json({ ok: true, shop })
 })
@@ -174,14 +177,27 @@ router.patch('/:id/status', requireRole('admin'), (req, res) => {
   res.json({ ok: true, shop })
 })
 
+/** แอดมินปิดโหมดพักร้อนของร้าน (บังคับ) */
+router.patch('/:id/vacation', requireRole('admin'), (req, res) => {
+  const db = getDb()
+  const shop = db.shops.find((s) => s.id === req.params.id)
+  if (!shop) return res.status(404).json({ ok: false, message: 'ไม่พบร้าน' })
+  shop.vacationMode = Boolean(req.body?.vacationMode)
+  persist()
+  res.json({ ok: true, shop })
+})
+
 router.get('/:slug', (req, res) => {
   const shop = getShopBySlug(req.params.slug)
   if (!shop || shop.status !== 'active') {
     return res.status(404).json({ ok: false, message: 'ไม่พบร้านค้า' })
   }
   ensureShopCategories(shop)
+  if (shop.vacationMode == null) shop.vacationMode = false
   const { shopCategory } = req.query
-  let products = getDb().products.filter((p) => p.shopId === shop.id && p.status === 'active')
+  let products = shop.vacationMode
+    ? []
+    : getDb().products.filter((p) => p.shopId === shop.id && p.status === 'active')
   if (shopCategory) {
     products = products.filter((p) => p.shopCategoryId === String(shopCategory))
   }

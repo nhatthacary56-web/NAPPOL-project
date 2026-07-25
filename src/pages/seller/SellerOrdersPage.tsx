@@ -1,11 +1,20 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { formatPrice } from '../../data/catalog'
 import { metaApi, orderApi } from '../../api'
 import { statusLabel, useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
 import type { OrderStatus } from '../../api/types'
 import './SellerShell.css'
+
+const STATUS_FILTERS: Array<{ id: '' | OrderStatus | 'cancelled'; label: string }> = [
+  { id: '', label: 'ทั้งหมด' },
+  { id: 'to_ship', label: 'ที่ต้องจัดส่ง' },
+  { id: 'shipping', label: 'กำลังส่ง' },
+  { id: 'to_review', label: 'รอรีวิว' },
+  { id: 'completed', label: 'สำเร็จ' },
+  { id: 'cancelled', label: 'ยกเลิก/คืนเงิน' },
+]
 
 const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
   to_ship: 'shipping',
@@ -18,6 +27,8 @@ const FALLBACK_CARRIERS = ['Kerry Express', 'Flash Express', 'J&T Express', 'Tha
 export function SellerOrdersPage() {
   const { orders, updateOrderStatus, refreshOrders } = useStore()
   const { toast } = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const statusFilter = (searchParams.get('status') || '') as '' | OrderStatus | 'cancelled'
   const [shipOrderId, setShipOrderId] = useState<string | null>(null)
   const [trackingNumber, setTrackingNumber] = useState('')
   const [carriers, setCarriers] = useState<string[]>(FALLBACK_CARRIERS)
@@ -25,6 +36,14 @@ export function SellerOrdersPage() {
   const [carrier, setCarrier] = useState(FALLBACK_CARRIERS[0])
   const [zortReady, setZortReady] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+
+  const filteredOrders = useMemo(() => {
+    if (!statusFilter) return orders
+    if (statusFilter === 'cancelled') {
+      return orders.filter((o) => o.status === 'cancelled' || o.status === 'refunded')
+    }
+    return orders.filter((o) => o.status === statusFilter)
+  }, [orders, statusFilter])
 
   useEffect(() => {
     void orderApi
@@ -96,12 +115,30 @@ export function SellerOrdersPage() {
         เรียกขนส่งผ่าน ZORT ได้เลขพัสดุ แล้วพิมพ์ใบปะหน้าบน Great App ได้เลย (ไม่ต้องเข้าเว็บขนส่ง)
         {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
       </p>
+      <div className="seller-tabs" role="tablist" aria-label="กรองสถานะออเดอร์">
+        {STATUS_FILTERS.map((tab) => (
+          <button
+            key={tab.id || 'all'}
+            type="button"
+            className={statusFilter === tab.id ? 'is-active' : undefined}
+            onClick={() => {
+              if (!tab.id) setSearchParams({})
+              else setSearchParams({ status: tab.id })
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="seller-card">
         <button type="button" className="seller-btn ghost" onClick={() => void refreshOrders()}>
           รีเฟรช
         </button>
-        {orders.length === 0 ? (
-          <p style={{ color: '#6b7280' }}>ยังไม่มีออเดอร์</p>
+        {filteredOrders.length === 0 ? (
+          <p style={{ color: '#6b7280' }}>
+            {orders.length === 0 ? 'ยังไม่มีออเดอร์' : 'ไม่มีออเดอร์ในสถานะนี้'}
+          </p>
         ) : (
           <table className="seller-table">
             <thead>
@@ -114,7 +151,7 @@ export function SellerOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => {
+              {filteredOrders.map((order) => {
                 const advanceTo = nextStatus[order.status]
                 return (
                   <tr key={order.id}>

@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { shopApi } from '../../api'
+import { returnApi, shopApi } from '../../api'
+import { defaultAppContent } from '../../data/appContent'
 import { formatPrice } from '../../data/catalog'
 import { useCatalog } from '../../store/CatalogContext'
 import { useStore } from '../../store/StoreContext'
@@ -9,12 +10,18 @@ import type { Shop } from '../../api/types'
 import './SellerShell.css'
 
 export function SellerDashboardPage() {
-  const { user, shop, refreshSession, orders } = useStore()
-  const { loadMine } = useCatalog()
+  const { user, shop, refreshSession, orders, unreadCount } = useStore()
+  const { loadMine, appContent } = useCatalog()
   const { toast } = useToast()
   const [myProducts, setMyProducts] = useState(0)
+  const [pendingReturns, setPendingReturns] = useState(0)
   const [form, setForm] = useState({ name: '', description: '', location: 'กรุงเทพฯ' })
   const [localShop, setLocalShop] = useState<Shop | null>(shop)
+
+  const sellerCopy = {
+    ...defaultAppContent.seller,
+    ...appContent.seller,
+  }
 
   useEffect(() => {
     setLocalShop(shop)
@@ -23,6 +30,19 @@ export function SellerDashboardPage() {
   useEffect(() => {
     void loadMine().then((items) => setMyProducts(items.length)).catch(() => setMyProducts(0))
   }, [loadMine, shop])
+
+  useEffect(() => {
+    if (!shop) {
+      setPendingReturns(0)
+      return
+    }
+    void returnApi
+      .seller()
+      .then((res) => {
+        setPendingReturns(res.returns.filter((r) => r.status === 'pending').length)
+      })
+      .catch(() => setPendingReturns(0))
+  }, [shop, orders.length])
 
   async function openShop(event: FormEvent) {
     event.preventDefault()
@@ -40,12 +60,22 @@ export function SellerDashboardPage() {
     }
   }
 
+  const kpis = useMemo(() => {
+    const toShip = orders.filter((o) => o.status === 'to_ship').length
+    const cancelled = orders.filter((o) => o.status === 'cancelled' || o.status === 'refunded').length
+    const toReview = orders.filter((o) => o.status === 'to_review').length
+    const revenue = orders
+      .filter((o) => o.status !== 'cancelled' && o.status !== 'unpaid')
+      .reduce((s, o) => s + o.total, 0)
+    return { toShip, cancelled, toReview, revenue }
+  }, [orders])
+
   if (!localShop) {
     return (
       <div className="seller-page">
         <h1>เปิดร้านบน Great App</h1>
         <p className="seller-page__sub">
-สวัสดี {user?.name} — กรอกข้อมูลร้านเพื่อเริ่มลงสินค้า (รอแอดมินอนุมัติ)
+          สวัสดี {user?.name} — กรอกข้อมูลร้านเพื่อเริ่มลงสินค้า (รอแอดมินอนุมัติ)
         </p>
         <div className="seller-card">
           <form className="seller-form" onSubmit={openShop}>
@@ -80,49 +110,135 @@ export function SellerDashboardPage() {
     )
   }
 
-  const revenue = orders.reduce((s, o) => s + o.total, 0)
-
   return (
-    <div className="seller-page">
-      <h1>{localShop.name}</h1>
-      <p className="seller-page__sub">
-        สถานะร้าน:{' '}
-        <span className={`seller-badge ${localShop.status}`}>{localShop.status}</span>
-        {localShop.status === 'pending'
-          ? ' — รอแอดมินอนุมัติก่อนลงขายได้'
-          : null}
-      </p>
+    <div className="seller-page seller-home">
+      <header className="seller-home__header">
+        <div className="seller-home__identity">
+          <div className="seller-home__avatar" aria-hidden>
+            {localShop.name.slice(0, 1).toUpperCase()}
+          </div>
+          <div>
+            <h1>{localShop.name}</h1>
+            <p className="seller-page__sub" style={{ margin: 0 }}>
+              สถานะ{' '}
+              <span className={`seller-badge ${localShop.status}`}>{localShop.status}</span>
+              {localShop.vacationMode ? (
+                <span className="seller-badge vacation">โหมดพักร้อน</span>
+              ) : null}
+            </p>
+          </div>
+        </div>
+        <Link className="seller-home__notify" to="/chats" aria-label="แชท">
+          <span aria-hidden>💬</span>
+          {unreadCount > 0 ? (
+            <em>{unreadCount > 99 ? '99+' : unreadCount}</em>
+          ) : null}
+        </Link>
+      </header>
 
-      <div className="seller-stats">
-        <div className="seller-stat">
-          <span>สินค้า</span>
+      {sellerCopy.announcement ? (
+        <div className="seller-announce" role="status">
+          <span aria-hidden>📢</span>
+          <p>{sellerCopy.announcement}</p>
+        </div>
+      ) : null}
+
+      {localShop.status === 'pending' ? (
+        <p className="seller-page__sub">รอแอดมินอนุมัติก่อนลงขายได้</p>
+      ) : null}
+
+      <div className="seller-kpi">
+        <Link className="seller-kpi__item" to="/seller/orders?status=to_ship">
+          <strong className={kpis.toShip > 0 ? 'is-urgent' : undefined}>{kpis.toShip}</strong>
+          <span>ที่ต้องจัดส่ง</span>
+        </Link>
+        <Link className="seller-kpi__item" to="/seller/orders?status=cancelled">
+          <strong>{kpis.cancelled}</strong>
+          <span>ยกเลิก/คืนเงิน</span>
+        </Link>
+        <Link className="seller-kpi__item" to="/seller/returns">
+          <strong className={pendingReturns > 0 ? 'is-urgent' : undefined}>{pendingReturns}</strong>
+          <span>คืนสินค้า</span>
+        </Link>
+        <Link className="seller-kpi__item" to="/seller/orders?status=to_review">
+          <strong>{kpis.toReview}</strong>
+          <span>รอรีวิว</span>
+        </Link>
+      </div>
+
+      <div className="seller-card seller-home__snapshot">
+        <div>
+          <span>สินค้าในร้าน</span>
           <strong>{myProducts}</strong>
         </div>
-        <div className="seller-stat">
-          <span>ออเดอร์</span>
+        <div>
+          <span>ออเดอร์ทั้งหมด</span>
           <strong>{orders.length}</strong>
         </div>
-        <div className="seller-stat">
-          <span>ยอดรวม (ทดลอง)</span>
-          <strong>{formatPrice(revenue)}</strong>
+        <div>
+          <span>ยอดขาย (ไม่รวมยกเลิก)</span>
+          <strong>{formatPrice(kpis.revenue)}</strong>
         </div>
       </div>
 
-      <div className="seller-card">
-        <div className="seller-actions">
-          <Link className="seller-btn" to="/seller/products">
-            จัดการสินค้า
+      <section className="seller-card">
+        <h2 className="seller-section-title">ทางลัด</h2>
+        <div className="seller-quick">
+          <Link to="/seller/products" className="seller-quick__item">
+            <span className="seller-quick__icon" style={{ background: '#dbeafe' }}>
+              📦
+            </span>
+            สินค้าของฉัน
           </Link>
-          <Link className="seller-btn ghost" to="/seller/orders">
-            ดูออเดอร์
+          <Link to="/seller/orders" className="seller-quick__item">
+            <span className="seller-quick__icon" style={{ background: '#fce7f3' }}>
+              📋
+            </span>
+            ออเดอร์
           </Link>
-          {localShop.status === 'active' ? (
-            <Link className="seller-btn ghost" to={`/shop/${localShop.slug}`}>
-              ดูหน้าร้านสาธารณะ
-            </Link>
-          ) : null}
+          <Link to="/seller/wallet" className="seller-quick__item">
+            <span className="seller-quick__icon" style={{ background: '#d1fae5' }}>
+              💳
+            </span>
+            การเงิน
+          </Link>
+          <Link to="/seller/tools" className="seller-quick__item">
+            <span className="seller-quick__icon" style={{ background: '#ffedd5' }}>
+              🧰
+            </span>
+            เครื่องมือ
+          </Link>
+          <Link to="/seller/shop" className="seller-quick__item">
+            <span className="seller-quick__icon" style={{ background: '#e0e7ff' }}>
+              🏪
+            </span>
+            ตั้งค่าร้าน
+          </Link>
+          <Link to="/chats" className="seller-quick__item">
+            <span className="seller-quick__icon" style={{ background: '#fef3c7' }}>
+              💬
+            </span>
+            แชท
+          </Link>
         </div>
-      </div>
+      </section>
+
+      {sellerCopy.tipBody ? (
+        <section className="seller-card seller-tip">
+          <h2 className="seller-section-title">{sellerCopy.tipTitle || 'คำแนะนำ'}</h2>
+          <p>{sellerCopy.tipBody}</p>
+          <div className="seller-actions">
+            <Link className="seller-btn ghost" to="/seller/me">
+              ไปที่ฉัน
+            </Link>
+            {localShop.status === 'active' ? (
+              <Link className="seller-btn" to={`/shop/${localShop.slug}`}>
+                ดูหน้าร้าน
+              </Link>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }

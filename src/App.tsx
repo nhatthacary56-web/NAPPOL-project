@@ -51,6 +51,8 @@ import { SellerOrdersPage } from './pages/seller/SellerOrdersPage'
 import { SellerShopPage } from './pages/seller/SellerShopPage'
 import { SellerWalletPage } from './pages/seller/SellerWalletPage'
 import { SellerReturnsPage } from './pages/seller/SellerReturnsPage'
+import { SellerToolsPage } from './pages/seller/SellerToolsPage'
+import { SellerMePage } from './pages/seller/SellerMePage'
 import { ChatListPage } from './pages/ChatListPage'
 import { ChatThreadPage } from './pages/ChatThreadPage'
 import { useStore } from './store/StoreContext'
@@ -88,6 +90,8 @@ export default function App() {
 
       <Route path="seller" element={<SellerShell />}>
         <Route index element={<SellerDashboardPage />} />
+        <Route path="tools" element={<SellerToolsPage />} />
+        <Route path="me" element={<SellerMePage />} />
         <Route path="products" element={<SellerProductsPage />} />
         <Route path="orders" element={<SellerOrdersPage />} />
         <Route path="returns" element={<SellerReturnsPage />} />

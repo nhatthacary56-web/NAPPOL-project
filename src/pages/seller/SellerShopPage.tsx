@@ -43,13 +43,41 @@ export function SellerShopPage() {
     }
   }
 
+  async function toggleVacation() {
+    if (!shop) return
+    try {
+      const next = !shop.vacationMode
+      await shopApi.updateMine({ vacationMode: next })
+      await refreshSession()
+      toast(next ? 'เปิดโหมดพักร้อนแล้ว' : 'ปิดโหมดพักร้อนแล้ว')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'อัปเดตไม่สำเร็จ')
+    }
+  }
+
   return (
     <div className="seller-page">
       <h1>ตั้งค่าร้าน</h1>
       <p className="seller-page__sub">
         slug: {shop.slug} · สถานะ{' '}
         <span className={`seller-badge ${shop.status}`}>{shop.status}</span>
+        {shop.vacationMode ? <span className="seller-badge vacation">โหมดพักร้อน</span> : null}
       </p>
+
+      <div className="seller-card seller-vacation-card">
+        <div>
+          <strong>โหมดพักร้อน</strong>
+          <p>ซ่อนสินค้าจากหน้าค้นหาและหน้าร้านชั่วคราว — ออเดอร์เดิมยังจัดการได้</p>
+        </div>
+        <button
+          type="button"
+          className={`seller-btn ${shop.vacationMode ? 'danger' : 'ghost'}`}
+          onClick={() => void toggleVacation()}
+        >
+          {shop.vacationMode ? 'ปิดโหมดพักร้อน' : 'เปิดโหมดพักร้อน'}
+        </button>
+      </div>
+
       <div className="seller-card">
         <form className="seller-form" onSubmit={onSubmit}>
           <label>

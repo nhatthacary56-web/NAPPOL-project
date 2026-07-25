@@ -252,6 +252,11 @@ function defaultAppContent() {
       returnPolicy:
         'ลูกค้าสามารถขอคืนสินค้าได้ตามเงื่อนไขของแต่ละร้านภายในระยะเวลาที่กำหนด โดยส่งคำขอผ่านหน้าคำสั่งซื้อ',
     },
+    seller: {
+      announcement: 'ยินดีต้อนรับสู่ Seller Center — ตรวจออเดอร์ที่ต้องจัดส่งและอัปเดตสต็อกเป็นประจำ',
+      tipTitle: 'คำแนะนำด้านธุรกิจ',
+      tipBody: 'ตอบแชทลูกค้าเร็ว และอัปเดตสถานะจัดส่งให้ครบ จะช่วยให้คะแนนร้านดีขึ้น',
+    },
     help: {
       title: 'ศูนย์ความช่วยเหลือ',
       subtitle: 'ติดต่อทีมแอดมิน หรือใช้ช่องทางด้านล่าง',
@@ -645,6 +650,13 @@ function migrate(data) {
       data.settings.defaultCarrier = data.settings.carriers[0] || 'Kerry Express'
     }
   }
+  if (Array.isArray(data.shops)) {
+    for (const shop of data.shops) {
+      if (shop.vacationMode == null) shop.vacationMode = false
+      if (!Array.isArray(shop.shopCategories)) shop.shopCategories = []
+    }
+  }
+
   if (!data.appContent) {
     data.appContent = defaultAppContent()
   } else {

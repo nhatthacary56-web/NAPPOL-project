@@ -183,6 +183,11 @@ export const shopApi = {
     api<{ ok: true; shop: Shop }>('/shops/mine', { method: 'PATCH', json: body }),
   setStatus: (id: string, status: Shop['status']) =>
     api<{ ok: true; shop: Shop }>(`/shops/${id}/status`, { method: 'PATCH', json: { status } }),
+  setVacation: (id: string, vacationMode: boolean) =>
+    api<{ ok: true; shop: Shop }>(`/shops/${id}/vacation`, {
+      method: 'PATCH',
+      json: { vacationMode },
+    }),
   listShopCategories: () =>
     api<{ ok: true; categories: ShopCategory[] }>('/shops/mine/categories'),
   createShopCategory: (name: string) =>

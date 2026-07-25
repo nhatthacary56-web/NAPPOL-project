@@ -29,6 +29,8 @@ export type Shop = {
   description: string
   location: string
   status: 'pending' | 'active' | 'rejected' | 'suspended'
+  /** เมื่อเปิด ซ่อนสินค้าจากหน้าร้าน/ค้นหาชั่วคราว */
+  vacationMode?: boolean
   shopCategories?: ShopCategory[]
   createdAt: string
 }
@@ -233,6 +235,12 @@ export type AppContent = {
   productShippingTemplate: string
   auth: { loginHint: string; buyerPitch: string; sellerPitch: string }
   legal: { privacy: string; terms: string; returnPolicy: string }
+  /** ข้อความที่ผู้ขายเห็นใน Seller Center */
+  seller: {
+    announcement: string
+    tipTitle: string
+    tipBody: string
+  }
   help: {
     title: string
     subtitle: string

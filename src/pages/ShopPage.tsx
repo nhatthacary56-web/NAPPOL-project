@@ -39,6 +39,11 @@ export function ShopPage() {
             <h1>{shop?.name}</h1>
             <p>{shop?.description || 'ร้านค้าบน DeeJa'}</p>
             <p className="shop-page__loc">{shop?.location}</p>
+            {shop?.vacationMode ? (
+              <p className="shop-page__vacation" role="status">
+                ร้านนี้อยู่ในโหมดพักร้อนชั่วคราว — สินค้าอาจไม่พร้อมสั่งซื้อ
+              </p>
+            ) : null}
           </section>
 
           {shopCategories.length > 0 ? (

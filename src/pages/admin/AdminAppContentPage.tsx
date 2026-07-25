@@ -14,7 +14,15 @@ export function AdminAppContentPage() {
   const [freeShippingMin, setFreeShippingMin] = useState(199)
   const [shippingFee, setShippingFee] = useState(40)
   const [section, setSection] = useState<
-    'shipping' | 'home' | 'mall' | 'live' | 'copy' | 'auth' | 'help' | 'legal'
+    | 'shipping'
+    | 'home'
+    | 'mall'
+    | 'live'
+    | 'copy'
+    | 'auth'
+    | 'help'
+    | 'legal'
+    | 'seller'
   >('shipping')
 
   useEffect(() => {
@@ -26,6 +34,10 @@ export function AdminAppContentPage() {
           legal: {
             ...defaultAppContent.legal,
             ...c.appContent.legal,
+          },
+          seller: {
+            ...defaultAppContent.seller,
+            ...c.appContent.seller,
           },
           help: {
             ...defaultAppContent.help,
@@ -72,6 +84,7 @@ export function AdminAppContentPage() {
     { id: 'auth' as const, label: '6. ล็อกอิน', hint: 'ข้อความหน้าเข้าสู่ระบบ' },
     { id: 'help' as const, label: '7. ช่วยเหลือ', hint: 'LINE / ช่องทาง + ข้อความฟอร์ม' },
     { id: 'legal' as const, label: '8. นโยบาย', hint: 'privacy / terms / คืนสินค้า' },
+    { id: 'seller' as const, label: '9. Seller Center', hint: 'ประกาศ / คำแนะนำผู้ขาย' },
   ]
 
   return (
@@ -791,6 +804,68 @@ export function AdminAppContentPage() {
           </label>
           <button type="submit" className="admin-btn">
             บันทึกนโยบาย
+          </button>
+        </form>
+      ) : null}
+
+      {section === 'seller' ? (
+        <form className="admin-card admin-form" onSubmit={saveContent}>
+          <h2 style={{ marginTop: 0, fontSize: 16 }}>Seller Center</h2>
+          <p style={{ color: '#6b7280', fontSize: 13, marginTop: 0 }}>
+            ข้อความที่ผู้ขายเห็นบนหน้าแรก Seller Center (แถบประกาศ + การ์ดคำแนะนำ)
+          </p>
+          <label>
+            ประกาศร้านค้า (แถบด้านบน)
+            <textarea
+              rows={3}
+              value={content.seller?.announcement || ''}
+              onChange={(e) =>
+                setContent({
+                  ...content,
+                  seller: {
+                    ...defaultAppContent.seller,
+                    ...content.seller,
+                    announcement: e.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            หัวข้อคำแนะนำ
+            <input
+              value={content.seller?.tipTitle || ''}
+              onChange={(e) =>
+                setContent({
+                  ...content,
+                  seller: {
+                    ...defaultAppContent.seller,
+                    ...content.seller,
+                    tipTitle: e.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            เนื้อหาคำแนะนำ
+            <textarea
+              rows={4}
+              value={content.seller?.tipBody || ''}
+              onChange={(e) =>
+                setContent({
+                  ...content,
+                  seller: {
+                    ...defaultAppContent.seller,
+                    ...content.seller,
+                    tipBody: e.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+          <button type="submit" className="admin-btn">
+            บันทึก Seller Center
           </button>
         </form>
       ) : null}

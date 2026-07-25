@@ -50,7 +50,7 @@ router.get('/', authOptional, (req, res) => {
 
   list = list.filter((p) => {
     const shop = getShopById(p.shopId)
-    return shop?.status === 'active'
+    return shop?.status === 'active' && !shop.vacationMode
   })
 
   if (category) list = list.filter((p) => p.categorySlug === category)
