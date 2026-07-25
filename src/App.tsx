@@ -12,6 +12,7 @@ import { ProductPage } from './pages/ProductPage'
 import { CategoryPage } from './pages/CategoryPage'
 import { ShopPage } from './pages/ShopPage'
 import { LoginPage } from './pages/LoginPage'
+import { LineCallbackPage } from './pages/LineCallbackPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { OrdersPage } from './pages/OrdersPage'
@@ -101,6 +102,7 @@ export default function App() {
       <Route path="category/:slug" element={<CategoryPage />} />
       <Route path="shop/:slug" element={<ShopPage />} />
       <Route path="login" element={<LoginPage />} />
+      <Route path="login/line/callback" element={<LineCallbackPage />} />
       <Route path="register" element={<RegisterPage />} />
       <Route path="wishlist" element={<WishlistPage />} />
       <Route path="vouchers" element={<VouchersPage />} />

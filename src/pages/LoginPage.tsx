@@ -7,7 +7,9 @@ import { useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
 import './AuthPages.css'
 
-type Providers = Awaited<ReturnType<typeof authApi.providers>>['providers']
+type Providers = Awaited<ReturnType<typeof authApi.providers>>['providers'] & {
+  lineReady?: boolean
+}
 
 declare global {
   interface Window {
@@ -152,6 +154,23 @@ export function LoginPage() {
     if (result.ok) navigate(from, { replace: true })
   }
 
+  function onLineLogin() {
+    if (providers?.lineChannelId && providers?.lineRedirectUri) {
+      const state = `${Date.now()}_${Math.random().toString(36).slice(2)}`
+      sessionStorage.setItem('line.login.from', from)
+      sessionStorage.setItem('line.login.state', state)
+      const url = new URL('https://access.line.me/oauth2/v2.1/authorize')
+      url.searchParams.set('response_type', 'code')
+      url.searchParams.set('client_id', providers.lineChannelId)
+      url.searchParams.set('redirect_uri', providers.lineRedirectUri)
+      url.searchParams.set('state', state)
+      url.searchParams.set('scope', 'profile openid')
+      window.location.href = url.toString()
+      return
+    }
+    void onDemoLine()
+  }
+
   async function onDemoLine() {
     setBusy(true)
     const result = await loginWithLine({ demoName: 'LINE Buyer' })
@@ -243,7 +262,7 @@ export function LoginPage() {
             type="button"
             className="auth-social-btn auth-social-btn--line"
             disabled={busy || providers?.line === false}
-            onClick={() => void onDemoLine()}
+            onClick={() => onLineLogin()}
           >
             เข้าสู่ระบบด้วย LINE
           </button>

@@ -20,6 +20,7 @@ function authProviders() {
   return {
     googleClientId: String(process.env.GOOGLE_CLIENT_ID || '').trim() || null,
     lineChannelId: String(process.env.LINE_CHANNEL_ID || '').trim() || null,
+    lineChannelSecret: String(process.env.LINE_CHANNEL_SECRET || '').trim() || null,
     lineRedirectUri:
       String(process.env.LINE_REDIRECT_URI || '').trim() ||
       (process.env.PUBLIC_APP_URL
@@ -90,18 +91,20 @@ function upsertSocialUser({ provider, providerId, email, name, phone }) {
 
 router.get('/providers', (_req, res) => {
   const p = authProviders()
+  const lineReady = Boolean(p.lineChannelId && p.lineChannelSecret && p.lineRedirectUri)
   res.json({
     ok: true,
     providers: {
       phone: true,
       google: Boolean(p.googleClientId) || p.demoSocial,
-      line: Boolean(p.lineChannelId) || p.demoSocial,
+      line: lineReady || p.demoSocial,
       email: true,
       googleClientId: p.googleClientId,
       lineChannelId: p.lineChannelId,
       lineRedirectUri: p.lineRedirectUri,
+      lineReady,
       demoOtp: p.demoOtp,
-      demoSocial: p.demoSocial && !p.googleClientId && !p.lineChannelId,
+      demoSocial: p.demoSocial && !p.googleClientId && !lineReady,
     },
   })
 })
@@ -243,22 +246,58 @@ router.post('/oauth/google', async (req, res) => {
 
 router.post('/oauth/line', async (req, res) => {
   try {
-    const { accessToken, demoName } = req.body ?? {}
+    const { accessToken, code, demoName } = req.body ?? {}
     const providers = authProviders()
     let lineId = ''
     let name = ''
+    let token = accessToken
 
-    if (accessToken) {
-      const verifyRes = await fetch(
-        `https://api.line.me/oauth2/v2.1/userinfo`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-      )
+    if (!token && code) {
+      if (!providers.lineChannelId || !providers.lineChannelSecret || !providers.lineRedirectUri) {
+        return res.status(400).json({ ok: false, message: 'ยังไม่ได้ตั้งค่า LINE Login ให้ครบ' })
+      }
+      const body = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: String(code),
+        redirect_uri: providers.lineRedirectUri,
+        client_id: providers.lineChannelId,
+        client_secret: providers.lineChannelSecret,
+      })
+      const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      })
+      const tokenJson = await tokenRes.json()
+      if (!tokenRes.ok || !tokenJson.access_token) {
+        return res.status(401).json({
+          ok: false,
+          message: tokenJson.error_description || tokenJson.error || 'แลกโค้ด LINE ไม่สำเร็จ',
+        })
+      }
+      token = tokenJson.access_token
+    }
+
+    if (token) {
+      const verifyRes = await fetch('https://api.line.me/oauth2/v2.1/userinfo', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       const profile = await verifyRes.json()
       if (!verifyRes.ok || !profile.sub) {
-        return res.status(401).json({ ok: false, message: 'ยืนยัน LINE ไม่สำเร็จ' })
+        // fallback to profile endpoint used by some LINE setups
+        const profileRes = await fetch('https://api.line.me/v2/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const basic = await profileRes.json()
+        if (!profileRes.ok || !basic.userId) {
+          return res.status(401).json({ ok: false, message: 'ยืนยัน LINE ไม่สำเร็จ' })
+        }
+        lineId = String(basic.userId)
+        name = String(basic.displayName || 'LINE User')
+      } else {
+        lineId = String(profile.sub)
+        name = String(profile.name || 'LINE User')
       }
-      lineId = String(profile.sub)
-      name = String(profile.name || 'LINE User')
     } else if (providers.demoSocial) {
       lineId = 'demo_line_user'
       name = String(demoName || 'LINE Buyer')

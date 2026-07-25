@@ -47,6 +47,7 @@ type StoreContextValue = {
   }) => Promise<{ ok: boolean; message: string }>
   loginWithLine: (payload?: {
     accessToken?: string
+    code?: string
     demoName?: string
   }) => Promise<{ ok: boolean; message: string }>
   register: (payload: {
@@ -405,7 +406,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
 
   const loginWithLine = useCallback(
-    async (payload?: { accessToken?: string; demoName?: string }) => {
+    async (payload?: { accessToken?: string; code?: string; demoName?: string }) => {
       try {
         const res = await authApi.lineLogin(payload || {})
         return applyAuthSession(res.token, res.message || 'เข้าสู่ระบบด้วย LINE สำเร็จ')

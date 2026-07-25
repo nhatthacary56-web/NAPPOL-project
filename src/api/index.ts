@@ -46,6 +46,7 @@ export const authApi = {
         googleClientId: string | null
         lineChannelId: string | null
         lineRedirectUri: string | null
+        lineReady?: boolean
         demoOtp: boolean
         demoSocial: boolean
       }
@@ -65,7 +66,7 @@ export const authApi = {
       method: 'POST',
       json: body,
     }),
-  lineLogin: (body: { accessToken?: string; demoName?: string }) =>
+  lineLogin: (body: { accessToken?: string; code?: string; demoName?: string }) =>
     api<{ ok: true; token: string; user: ApiUser; message?: string }>('/auth/oauth/line', {
       method: 'POST',
       json: body,
