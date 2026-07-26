@@ -3,14 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#ee4d2d" />
-    <title>Great App</title>
+    <meta name="theme-color" content="#e91e8c" />
+    <title>DeeJa</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      /* ใช้สีแบรนด์ล่าสุดจากแคชก่อน React โหลด — กันหน้าส้มแวบ */
+      (function () {
+        try {
+          var raw = localStorage.getItem('great.brandTheme')
+          var brand = raw ? JSON.parse(raw) : null
+          var primary = (brand && brand.primaryColor) || '#e91e8c'
+          var secondary = (brand && brand.secondaryColor) || '#ff5cad'
+          var accent = (brand && brand.accentColor) || '#ff8fd0'
+          var root = document.documentElement
+          root.style.setProperty('--brand', primary)
+          root.style.setProperty('--brand-secondary', secondary)
+          root.style.setProperty('--brand-accent', accent)
+          root.style.setProperty('--brand-dark', primary)
+          root.style.setProperty('--danger', primary)
+          root.style.setProperty(
+            '--brand-grad',
+            'linear-gradient(90deg, ' + primary + ' 0%, ' + secondary + ' 100%)',
+          )
+          root.style.setProperty(
+            '--brand-gradient',
+            'linear-gradient(135deg, ' +
+              primary +
+              ' 0%, ' +
+              secondary +
+              ' 55%, ' +
+              accent +
+              ' 100%)',
+          )
+          root.style.setProperty(
+            '--brand-soft',
+            'color-mix(in srgb, ' + primary + ' 14%, white)',
+          )
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute('content', primary)
+          if (brand && brand.name) document.title = brand.name
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

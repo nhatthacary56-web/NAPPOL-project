@@ -173,12 +173,12 @@ function emptyDb() {
       },
     ],
     brand: {
-      name: 'Great App',
+      name: 'DeeJa',
       tagline: 'ช้อปง่าย ได้ของดี',
-      primaryColor: '#ee4d2d',
-      secondaryColor: '#ff7337',
-      accentColor: '#ffb000',
-      logoText: 'Great App',
+      primaryColor: '#e91e8c',
+      secondaryColor: '#ff5cad',
+      accentColor: '#ff8fd0',
+      logoText: 'DeeJa',
       logoUrl: '',
     },
     settings: {
@@ -593,12 +593,12 @@ function seed() {
   db.appContent = defaultAppContent()
   db.categories = seedCategories
   db.brand = {
-    name: 'Great App',
+    name: 'DeeJa',
     tagline: 'ช้อปง่าย ได้ของดี',
-    primaryColor: '#ee4d2d',
-    secondaryColor: '#ff7337',
-    accentColor: '#ffb000',
-    logoText: 'Great App',
+    primaryColor: '#e91e8c',
+    secondaryColor: '#ff5cad',
+    accentColor: '#ff8fd0',
+    logoText: 'DeeJa',
     logoUrl: '',
   }
   db.carts = {}
@@ -730,9 +730,9 @@ function migrate(data) {
     }
   }
   if (!data.brand) data.brand = emptyDb().brand
-  if (!data.brand.secondaryColor) data.brand.secondaryColor = '#ff7337'
-  if (!data.brand.accentColor) data.brand.accentColor = '#ffb000'
-  if (!data.brand.primaryColor) data.brand.primaryColor = '#ee4d2d'
+  if (!data.brand.secondaryColor) data.brand.secondaryColor = '#ff5cad'
+  if (!data.brand.accentColor) data.brand.accentColor = '#ff8fd0'
+  if (!data.brand.primaryColor) data.brand.primaryColor = '#e91e8c'
   if (data.brand.logoUrl === undefined) data.brand.logoUrl = ''
 
   // Home promo banners: fill missing images so "ลดแรงทุกวัน" shows as photo banners

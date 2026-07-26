@@ -1,22 +1,26 @@
 :root {
-  --brand: #ee4d2d;
-  --brand-dark: #d73211;
-  --brand-soft: #fff1ee;
-  --brand-grad: linear-gradient(90deg, #ee4d2d 0%, #ff7337 100%);
-  --text: #222222;
-  --text-secondary: #757575;
-  --text-muted: #999999;
-  --border: #e8e8e8;
+  --brand: #e91e8c;
+  --brand-secondary: #ff5cad;
+  --brand-accent: #ff8fd0;
+  --brand-dark: #e91e8c;
+  --brand-soft: color-mix(in srgb, #e91e8c 14%, white);
+  --brand-soft-strong: color-mix(in srgb, #e91e8c 22%, white);
+  --brand-grad: linear-gradient(90deg, #e91e8c 0%, #ff5cad 100%);
+  --brand-gradient: linear-gradient(135deg, #e91e8c 0%, #ff5cad 55%, #ff8fd0 100%);
+  --text: #1f2937;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border: #eceff3;
   --surface: #ffffff;
-  --bg: #f5f5f5;
-  --star: #ffce3d;
+  --bg: #f7f5f8;
+  --star: #fbbf24;
   --success: #26aa99;
-  --danger: #ee4d2d;
+  --danger: #e91e8c;
   --shadow-header: 0 1px 1px rgba(0, 0, 0, 0.05);
   --nav-height: 56px;
   --header-height: 52px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --font: 'Noto Sans Thai', 'Segoe UI', sans-serif;
   --max-width: 540px;
 }
@@ -37,7 +41,7 @@ body,
 body {
   font-family: var(--font);
   color: var(--text);
-  background: #eaeaea;
+  background: #ebe6ee;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }

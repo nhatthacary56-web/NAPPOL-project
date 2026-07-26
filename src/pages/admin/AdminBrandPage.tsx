@@ -36,8 +36,8 @@ export function AdminBrandPage() {
   const { toast } = useToast()
   const [form, setForm] = useState<Brand>({
     ...brand,
-    secondaryColor: brand.secondaryColor || '#ff7337',
-    accentColor: brand.accentColor || '#ffb000',
+    secondaryColor: brand.secondaryColor || '#ff5cad',
+    accentColor: brand.accentColor || '#ff8fd0',
     logoUrl: brand.logoUrl || '',
   })
   const [uploading, setUploading] = useState(false)
@@ -45,8 +45,8 @@ export function AdminBrandPage() {
   useEffect(() => {
     setForm({
       ...brand,
-      secondaryColor: brand.secondaryColor || '#ff7337',
-      accentColor: brand.accentColor || '#ffb000',
+      secondaryColor: brand.secondaryColor || '#ff5cad',
+      accentColor: brand.accentColor || '#ff8fd0',
       logoUrl: brand.logoUrl || '',
     })
   }, [brand])

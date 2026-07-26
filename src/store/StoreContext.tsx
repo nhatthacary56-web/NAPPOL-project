@@ -32,6 +32,12 @@ import type {
   Shop,
 } from '../api/types'
 import { cartLineKey } from '../api/types'
+import {
+  applyBrandTheme,
+  defaultBrand,
+  initialBrand,
+  writeCachedBrand,
+} from '../theme/brandTheme'
 import { loadJson, saveJson } from './storage'
 import { useCatalog } from './CatalogContext'
 
@@ -157,16 +163,6 @@ type StoreContextValue = {
 const StoreContext = createContext<StoreContextValue | null>(null)
 const CART_KEY = 'great.cart'
 
-const defaultBrand: Brand = {
-  name: 'Great App',
-  tagline: 'ช้อปง่าย ได้ของดี',
-  primaryColor: '#ee4d2d',
-  secondaryColor: '#ff7337',
-  accentColor: '#ffb000',
-  logoText: 'Great App',
-  logoUrl: '',
-}
-
 function mergeCartItems(local: CartItem[], remote: CartItem[]): CartItem[] {
   const map = new Map<string, CartItem>()
   for (const item of remote) {
@@ -200,7 +196,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [vouchers, setVouchers] = useState<ApiVoucher[]>([])
   const [claimedVouchers, setClaimedVouchers] = useState<ApiVoucher[]>([])
   const [orders, setOrders] = useState<ApiOrder[]>([])
-  const [brand, setBrand] = useState<Brand>(defaultBrand)
+  const [brand, setBrand] = useState<Brand>(() => initialBrand())
   const [notifications, setNotifications] = useState<ApiNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [chatUnread, setChatUnread] = useState(0)
@@ -221,17 +217,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [cart, user])
 
   useEffect(() => {
-    const primary = brand.primaryColor || '#ee4d2d'
-    const secondary = brand.secondaryColor || '#ff7337'
-    const accent = brand.accentColor || '#ffb000'
-    const root = document.documentElement
-    root.style.setProperty('--brand', primary)
-    root.style.setProperty('--brand-secondary', secondary)
-    root.style.setProperty('--brand-accent', accent)
-    root.style.setProperty('--brand-grad', `linear-gradient(90deg, ${primary} 0%, ${secondary} 100%)`)
-    root.style.setProperty('--brand-gradient', `linear-gradient(90deg, ${primary} 0%, ${secondary} 100%)`)
-    root.style.setProperty('--brand-soft', `color-mix(in srgb, ${primary} 14%, white)`)
-    document.title = brand.name
+    applyBrandTheme(brand)
+    writeCachedBrand(brand)
   }, [brand])
 
   const refreshSession = useCallback(async () => {
@@ -333,9 +320,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const refreshBrand = useCallback(async () => {
     try {
       const res = await metaApi.brand()
-      setBrand(res.brand)
+      setBrand({ ...defaultBrand, ...res.brand })
     } catch {
-      /* keep default */
+      /* keep cached / default */
     }
   }, [])
 
@@ -851,7 +838,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const updateBrand = useCallback(async (payload: Partial<Brand>) => {
     const res = await metaApi.updateBrand(payload)
-    setBrand(res.brand)
+    setBrand({ ...defaultBrand, ...res.brand })
   }, [])
 
   const adminLogin = useCallback(async (username: string, password: string) => {

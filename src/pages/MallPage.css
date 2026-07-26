@@ -1,6 +1,6 @@
 .mall-page__hero {
   padding: 28px 16px 22px;
-  background: linear-gradient(160deg, #ee4d2d 0%, #ff8a4c 55%, #ffd0b5 100%);
+  background: var(--brand-gradient, var(--brand-grad));
   color: #fff;
 }
 
@@ -56,6 +56,7 @@
   display: grid;
   place-items: center;
   font-size: 22px;
+  background: var(--brand-soft);
 }
 
 .mall-page__cat em {

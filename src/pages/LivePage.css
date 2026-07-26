@@ -32,7 +32,7 @@
   padding: 10px 14px;
   font-weight: 800;
   font-size: 13px;
-  background: var(--brand, #ee4d2d);
+  background: var(--brand);
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
@@ -69,7 +69,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--brand, #ee4d2d);
+  background: var(--brand);
   color: #fff;
   font-weight: 800;
 }
@@ -167,7 +167,7 @@
 }
 
 .feed-card__pin small {
-  color: var(--brand, #ee4d2d);
+  color: var(--brand);
   font-weight: 800;
   font-size: 13px;
 }
@@ -271,7 +271,7 @@
 }
 
 .feed-modal__products button.is-on {
-  border-color: var(--brand, #ee4d2d);
+  border-color: var(--brand);
   background: #fff5f2;
 }
 
@@ -291,7 +291,7 @@
   font-style: normal;
   font-size: 12px;
   font-weight: 800;
-  color: var(--brand, #ee4d2d);
+  color: var(--brand);
   white-space: nowrap;
 }
 
@@ -308,7 +308,7 @@
   padding: 10px 16px;
   font: inherit;
   font-weight: 800;
-  background: var(--brand, #ee4d2d);
+  background: var(--brand);
   color: #fff;
   cursor: pointer;
 }

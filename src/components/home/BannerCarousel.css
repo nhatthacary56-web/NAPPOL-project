@@ -70,17 +70,15 @@
   background: rgba(255, 255, 255, 0.16);
 }
 
-.banner-card--orange {
-  background: linear-gradient(135deg, #ff6a3d, #ee4d2d);
-}
-.banner-card--coral {
-  background: linear-gradient(135deg, #ff8a5c, #f0452d);
-}
-.banner-card--amber {
-  background: linear-gradient(135deg, #ffb347, #ff7a2f);
+/* tone เก่า (ส้ม) ผูกกับแบรนด์ปัจจุบัน — ไม่ค้างสี Shopee */
+.banner-card--orange,
+.banner-card--coral,
+.banner-card--amber,
+.banner-card--brand {
+  background: var(--brand-gradient, var(--brand-grad));
 }
 .banner-card--pink {
-  background: linear-gradient(135deg, #ff5cad, #e91e8c);
+  background: var(--brand-gradient, linear-gradient(135deg, #ff5cad, #e91e8c));
 }
 .banner-card--red {
   background: linear-gradient(135deg, #ff4d4f, #cf1322);

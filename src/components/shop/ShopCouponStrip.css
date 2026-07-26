@@ -1,15 +1,15 @@
 .shop-coupons {
   margin: 0 0 14px;
   padding: 12px 16px;
-  background: #fff7ed;
-  border-bottom: 1px solid #fed7aa;
+  background: var(--brand-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand) 22%, #fff);
 }
 
 .shop-coupons h2 {
   margin: 0 0 10px;
   font-size: 14px;
   font-weight: 700;
-  color: #9a3412;
+  color: var(--brand);
 }
 
 .shop-coupons__list {
@@ -27,29 +27,28 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: #fff;
-  border: 1px dashed #fb923c;
+  border: 1px dashed color-mix(in srgb, var(--brand) 55%, #fff);
 }
 
 .shop-coupons__card strong {
   display: block;
-  color: #ea580c;
+  color: var(--brand);
   font-size: 16px;
 }
 
 .shop-coupons__card p {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #78350f;
+  color: var(--text);
 }
 
 .shop-coupons__card span {
   display: block;
   margin-top: 2px;
   font-size: 11px;
-  color: #9a3412;
-  opacity: 0.85;
+  color: var(--text-secondary);
 }
 
 .shop-coupons__card button {
@@ -58,7 +57,7 @@
   border-radius: 999px;
   min-height: 32px;
   padding: 0 12px;
-  background: #ea580c;
+  background: var(--brand);
   color: #fff;
   font: inherit;
   font-size: 12px;
@@ -67,6 +66,6 @@
 }
 
 .shop-coupons__card button:disabled {
-  background: #fdba74;
+  background: color-mix(in srgb, var(--brand) 45%, #fff);
   cursor: default;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../components/layout/PageHeader'
+import { ImageLightbox } from '../components/product/ImageLightbox'
 import { ShopCouponStrip } from '../components/shop/ShopCouponStrip'
 import { formatPrice, formatSold } from '../data/catalog'
 import { catalogApi, chatApi, reviewApi, voucherApi } from '../api'
@@ -17,6 +18,7 @@ export function ProductPage() {
   const [shopVouchers, setShopVouchers] = useState<ApiVoucher[]>([])
   const [missing, setMissing] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const [variantId, setVariantId] = useState('')
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -152,7 +154,15 @@ export function ProductPage() {
       />
       <main className="product-page">
         <div className="product-page__media">
-          <img src={images[activeImage] || product.image} alt={product.name} />
+          <button
+            type="button"
+            className="product-page__media-btn"
+            onClick={() => setLightboxOpen(true)}
+            aria-label="ดูรูปขยาย"
+          >
+            <img src={images[activeImage] || product.image} alt={product.name} />
+            <span className="product-page__zoom-hint">แตะเพื่อขยาย</span>
+          </button>
           <button
             type="button"
             className={`product-page__wish${wishlisted ? ' is-active' : ''}`}
@@ -168,6 +178,15 @@ export function ProductPage() {
             {wishlisted ? '♥' : '♡'}
           </button>
         </div>
+        {lightboxOpen ? (
+          <ImageLightbox
+            images={images}
+            index={activeImage}
+            alt={product.name}
+            onClose={() => setLightboxOpen(false)}
+            onIndexChange={setActiveImage}
+          />
+        ) : null}
         {images.length > 1 ? (
           <div className="product-page__thumbs">
             {images.map((src, idx) => (
