@@ -1,0 +1,138 @@
+.buyer-wallet {
+  padding: 16px;
+  padding-bottom: 32px;
+}
+
+.buyer-wallet__hero {
+  padding: 22px 18px;
+  border-radius: var(--radius-md);
+  background: var(--brand-gradient, var(--brand-grad));
+  color: #fff;
+}
+
+.buyer-wallet__hero span {
+  display: block;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.buyer-wallet__hero strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.buyer-wallet__hero p {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.92;
+}
+
+.buyer-wallet__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.buyer-wallet__stats div {
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.buyer-wallet__stats span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.buyer-wallet__stats strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+}
+
+.buyer-wallet__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.buyer-wallet__actions a {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.buyer-wallet__ledger {
+  margin-top: 18px;
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.buyer-wallet__ledger h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.buyer-wallet__empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.buyer-wallet__ledger ul {
+  display: grid;
+  gap: 10px;
+}
+
+.buyer-wallet__ledger li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.buyer-wallet__ledger li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.buyer-wallet__ledger strong {
+  display: block;
+  font-size: 13px;
+}
+
+.buyer-wallet__ledger span {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.buyer-wallet__ledger em {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.buyer-wallet__ledger em.is-in {
+  color: #059669;
+}
+
+.buyer-wallet__ledger em.is-out {
+  color: var(--text);
+}

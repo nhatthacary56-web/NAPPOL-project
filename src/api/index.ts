@@ -2,6 +2,7 @@ import { api, setToken, getToken } from './client'
 import type {
   ApiAddress,
   ApiBanner,
+  ApiBuyerWallet,
   ApiCategory,
   ApiChatMessage,
   ApiChatSummary,
@@ -15,6 +16,7 @@ import type {
   ApiUser,
   ApiVoucher,
   ApiWallet,
+  ApiWalletLedger,
   ApiWithdrawal,
   AppContent,
   Brand,
@@ -231,7 +233,7 @@ export const orderApi = {
   checkout: (body: {
     items: Array<{ productId: string; qty: number; variantId?: string }>
     addressId: string
-    paymentMethod: 'cod' | 'transfer' | 'card'
+    paymentMethod: 'cod' | 'transfer' | 'card' | 'wallet'
     voucherCode?: string
   }) =>
     api<{ ok: true; order: ApiOrder; orders?: ApiOrder[]; orderIds?: string[] }>(
@@ -298,6 +300,14 @@ export const walletApi = {
       withdrawals: ApiWithdrawal[]
       settings: { commissionRate: number }
     }>('/wallet/mine'),
+  buyerMine: () =>
+    api<{ ok: true; wallet: ApiBuyerWallet; ledger: ApiWalletLedger[] }>('/wallet/buyer/mine'),
+  buyerAdmin: () =>
+    api<{
+      ok: true
+      wallets: Array<ApiBuyerWallet & { userName?: string; userEmail?: string }>
+      ledger: ApiWalletLedger[]
+    }>('/wallet/buyer/admin'),
   withdraw: (amount: number, note?: string) =>
     api<{ ok: true; withdrawal: ApiWithdrawal; wallet: ApiWallet }>('/wallet/withdraw', {
       method: 'POST',
@@ -499,11 +509,18 @@ export const metaApi = {
 }
 
 export const returnApi = {
+  reasons: () => api<{ ok: true; reasons: string[] }>('/returns/reasons'),
   mine: () => api<{ ok: true; returns: ApiReturn[] }>('/returns/mine'),
   seller: () => api<{ ok: true; returns: ApiReturn[] }>('/returns/seller'),
   admin: () => api<{ ok: true; returns: ApiReturn[] }>('/returns/admin'),
-  create: (body: { orderId: string; reason: string; itemProductIds?: string[] }) =>
-    api<{ ok: true; return: ApiReturn }>('/returns', { method: 'POST', json: body }),
+  create: (body: {
+    orderId: string
+    reason: string
+    reasonDetail?: string
+    itemProductIds?: string[]
+    evidenceUrls?: string[]
+    refundMethod?: 'wallet' | 'original'
+  }) => api<{ ok: true; return: ApiReturn }>('/returns', { method: 'POST', json: body }),
   setStatus: (id: string, status: 'approved' | 'rejected' | 'refunded', note?: string) =>
     api<{ ok: true; return: ApiReturn }>(`/returns/${id}`, {
       method: 'PATCH',

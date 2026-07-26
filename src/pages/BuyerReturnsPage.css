@@ -1,0 +1,107 @@
+.buyer-returns {
+  padding: 16px;
+}
+
+.buyer-returns__hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.buyer-returns__hint a {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.buyer-returns__empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 12px;
+}
+
+.buyer-returns__list {
+  display: grid;
+  gap: 10px;
+}
+
+.buyer-returns__list li {
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.buyer-returns__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.buyer-returns__badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.buyer-returns__badge.is-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.buyer-returns__badge.is-refunded,
+.buyer-returns__badge.is-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.buyer-returns__badge.is-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.buyer-returns__list p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.buyer-returns__detail {
+  color: var(--text-secondary) !important;
+}
+
+.buyer-returns__meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.buyer-returns__meta a {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.buyer-returns__credit {
+  margin-top: 8px !important;
+  color: #059669 !important;
+  font-weight: 700;
+}
+
+.buyer-returns__evidence {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  overflow-x: auto;
+}
+
+.buyer-returns__evidence img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+}

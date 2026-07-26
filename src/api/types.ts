@@ -141,11 +141,12 @@ export type ApiOrder = {
   discount: number
   total: number
   address: ApiAddress
-  paymentMethod: 'cod' | 'transfer' | 'card'
+  paymentMethod: 'cod' | 'transfer' | 'card' | 'wallet'
   voucherCode?: string
   trackingNumber?: string | null
   carrier?: string | null
   shippedAt?: string | null
+  returnId?: string | null
   zortOrderId?: number | string | null
   zortOrderNumber?: string | null
   shippingLabelUrl?: string | null
@@ -154,7 +155,7 @@ export type ApiOrder = {
     { gross: number; fee: number; net: number; status: string }
   >
   payment?: {
-    status: 'pending' | 'paid' | 'cod'
+    status: 'pending' | 'paid' | 'cod' | 'refunded'
     paidAt?: string | null
     method?: string
     note?: string
@@ -170,6 +171,25 @@ export type ApiOrder = {
       ref: string
     }
   }
+}
+
+export type ApiBuyerWallet = {
+  userId: string
+  balance: number
+  totalCredited: number
+  totalDebited: number
+}
+
+export type ApiWalletLedger = {
+  id: string
+  userId: string
+  type: 'credit' | 'debit'
+  amount: number
+  refType?: string | null
+  refId?: string | null
+  note?: string
+  createdAt: string
+  userName?: string
 }
 
 export type ApiChatSummary = {
@@ -334,6 +354,9 @@ export type ApiReturn = {
   shopId: string
   shopName?: string
   reason: string
+  reasonDetail?: string
+  evidenceUrls?: string[]
+  refundMethod?: 'wallet' | 'original'
   amount: number
   status: 'pending' | 'approved' | 'rejected' | 'refunded'
   items: Array<{
@@ -347,6 +370,7 @@ export type ApiReturn = {
   createdAt: string
   processedAt?: string | null
   adminNote?: string
+  refundedToWallet?: number
 }
 
 export type ApiReview = {

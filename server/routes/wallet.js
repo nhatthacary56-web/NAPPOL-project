@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   createId,
+  getBuyerWallet,
   getDb,
   getShopByOwner,
   getWallet,
@@ -10,6 +11,38 @@ import {
 import { requireAuth, requireRole } from '../auth.js'
 
 const router = Router()
+
+/** กระเป๋าเงินลูกค้า — รับเงินคืนจากยกเลิก/คืนสินค้า */
+router.get('/buyer/mine', requireAuth, (req, res) => {
+  const db = getDb()
+  const wallet = getBuyerWallet(req.user.id)
+  const ledger = (db.walletLedger || [])
+    .filter((row) => row.userId === req.user.id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 50)
+  res.json({ ok: true, wallet, ledger })
+})
+
+router.get('/buyer/admin', requireRole('admin'), (_req, res) => {
+  const db = getDb()
+  const wallets = [...(db.buyerWallets || [])].sort((a, b) => b.balance - a.balance)
+  const ledger = [...(db.walletLedger || [])]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 100)
+  const users = Object.fromEntries(db.users.map((u) => [u.id, u]))
+  res.json({
+    ok: true,
+    wallets: wallets.map((w) => ({
+      ...w,
+      userName: users[w.userId]?.name || w.userId,
+      userEmail: users[w.userId]?.email || '',
+    })),
+    ledger: ledger.map((row) => ({
+      ...row,
+      userName: users[row.userId]?.name || row.userId,
+    })),
+  })
+})
 
 router.get('/mine', requireRole('seller', 'admin'), (req, res) => {
   const shop = getShopByOwner(req.user.id)

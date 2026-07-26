@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { formatPrice } from '../../data/catalog'
 import { walletApi } from '../../api'
-import type { ApiWithdrawal, PlatformSettings } from '../../api/types'
+import type { ApiBuyerWallet, ApiWalletLedger, ApiWithdrawal, PlatformSettings } from '../../api/types'
 import { useToast } from '../../store/ToastContext'
 import './AdminShell.css'
 
@@ -9,11 +9,21 @@ export function AdminWalletPage() {
   const { toast } = useToast()
   const [withdrawals, setWithdrawals] = useState<ApiWithdrawal[]>([])
   const [settings, setSettings] = useState<PlatformSettings | null>(null)
+  const [buyerWallets, setBuyerWallets] = useState<
+    Array<ApiBuyerWallet & { userName?: string; userEmail?: string }>
+  >([])
+  const [buyerLedger, setBuyerLedger] = useState<ApiWalletLedger[]>([])
 
   async function load() {
-    const [w, s] = await Promise.all([walletApi.withdrawals(), walletApi.settings()])
+    const [w, s, buyer] = await Promise.all([
+      walletApi.withdrawals(),
+      walletApi.settings(),
+      walletApi.buyerAdmin().catch(() => ({ wallets: [], ledger: [] })),
+    ])
     setWithdrawals(w.withdrawals)
     setSettings(s.settings)
+    setBuyerWallets(buyer.wallets || [])
+    setBuyerLedger(buyer.ledger || [])
   }
 
   useEffect(() => {
@@ -46,7 +56,70 @@ export function AdminWalletPage() {
   return (
     <div className="admin-page">
       <h1>กระเป๋าเงิน / ชำระเงิน</h1>
-      <p className="admin-page__sub">อนุมัติถอนเงินผู้ขาย และตั้งค่า PromptPay / บัญชีโอน</p>
+      <p className="admin-page__sub">
+        อนุมัติถอนเงินผู้ขาย · ดูกระเป๋าลูกค้า (เงินคืน) · ตั้งค่า PromptPay / บัญชีโอน
+      </p>
+
+      <div className="admin-card" style={{ marginBottom: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: 16 }}>กระเป๋าเงินลูกค้า (เงินคืน)</h2>
+        {buyerWallets.length === 0 ? (
+          <p style={{ color: '#6b7280' }}>ยังไม่มียอดในกระเป๋าลูกค้า</p>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>ลูกค้า</th>
+                <th>คงเหลือ</th>
+                <th>เข้าทั้งหมด</th>
+                <th>ใช้ไป</th>
+              </tr>
+            </thead>
+            <tbody>
+              {buyerWallets.map((w) => (
+                <tr key={w.userId}>
+                  <td>
+                    {w.userName || w.userId}
+                    <div style={{ color: '#6b7280', fontSize: 12 }}>{w.userEmail}</div>
+                  </td>
+                  <td>{formatPrice(w.balance)}</td>
+                  <td>{formatPrice(w.totalCredited)}</td>
+                  <td>{formatPrice(w.totalDebited)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {buyerLedger.length > 0 ? (
+          <>
+            <h3 style={{ fontSize: 14, marginTop: 16 }}>รายการล่าสุด</h3>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>ลูกค้า</th>
+                  <th>ประเภท</th>
+                  <th>ยอด</th>
+                  <th>หมายเหตุ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {buyerLedger.slice(0, 20).map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.userName || row.userId}</td>
+                    <td>{row.type === 'credit' ? 'เข้า' : 'ออก'}</td>
+                    <td>{formatPrice(row.amount)}</td>
+                    <td>
+                      {row.note || '—'}
+                      <div style={{ color: '#6b7280', fontSize: 11 }}>
+                        {new Date(row.createdAt).toLocaleString('th-TH')}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        ) : null}
+      </div>
 
       {settings ? (
         <form className="admin-card admin-form" onSubmit={saveSettings}>

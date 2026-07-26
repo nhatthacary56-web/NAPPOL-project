@@ -182,3 +182,109 @@
   padding: 0 10px;
   font: inherit;
 }
+
+.order-detail__link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #fff;
+  font-weight: 600;
+}
+
+.order-return-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: end center;
+  padding: 12px;
+}
+
+.order-return-modal__panel {
+  width: min(480px, 100%);
+  max-height: min(88dvh, 720px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px 16px 12px 12px;
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 10px;
+}
+
+.order-return-modal__panel h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.order-return-modal__panel > p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.order-return-modal__panel label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.order-return-modal__panel select,
+.order-return-modal__panel textarea {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--text);
+}
+
+.order-return-modal__items {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin: 0;
+}
+
+.order-return-modal__items legend {
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.order-return-modal__items label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.order-return-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.order-return-modal__actions button {
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--brand);
+  color: #fff;
+}
+
+.order-return-modal__actions button.ghost {
+  background: #f3f4f6;
+  color: #374151;
+}

@@ -1,12 +1,23 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../components/layout/PageHeader'
+import { ImageUpload } from '../components/ImageUpload'
 import { formatPrice } from '../data/catalog'
 import { chatApi, returnApi, reviewApi } from '../api'
 import { statusLabel, useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
 import type { OrderStatus } from '../api/types'
 import './OrderDetailPage.css'
+
+const FALLBACK_REASONS = [
+  'สินค้าไม่ตรงตามที่สั่ง',
+  'สินค้าชำรุด / เสียหาย',
+  'ได้รับสินค้าไม่ครบ',
+  'คุณภาพไม่เป็นไปตามที่โฆษณา',
+  'เปลี่ยนใจ / ไม่ต้องการแล้ว',
+  'ร้านส่งช้าเกินกำหนด',
+  'อื่นๆ',
+]
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -25,6 +36,13 @@ export function OrderDetailPage() {
   const [comment, setComment] = useState('')
   const [slipNote, setSlipNote] = useState('')
   const [reviewedIds, setReviewedIds] = useState<string[]>([])
+  const [returnOpen, setReturnOpen] = useState(false)
+  const [reasons, setReasons] = useState<string[]>(FALLBACK_REASONS)
+  const [returnReason, setReturnReason] = useState(FALLBACK_REASONS[0])
+  const [returnDetail, setReturnDetail] = useState('')
+  const [returnEvidence, setReturnEvidence] = useState(['', ''])
+  const [selectedReturnItems, setSelectedReturnItems] = useState<string[]>([])
+  const [returnBusy, setReturnBusy] = useState(false)
 
   useEffect(() => {
     void refreshOrders()
@@ -66,8 +84,58 @@ export function OrderDetailPage() {
     try {
       await updateOrderStatus(order!.id, next)
       toast(message)
+      if (next === 'cancelled') {
+        const paid =
+          order!.payment?.status === 'paid' || order!.paymentMethod === 'wallet'
+        if (paid) {
+          toast('คืนเงินเข้ากระเป๋าแล้ว — ดูได้ที่เมนูกระเป๋าเงิน')
+        }
+      }
     } catch (error) {
       toast(error instanceof Error ? error.message : 'อัปเดตไม่สำเร็จ')
+    }
+  }
+
+  function openReturnForm() {
+    setSelectedReturnItems(order!.items.map((i) => i.productId))
+    setReturnReason(reasons[0] || FALLBACK_REASONS[0])
+    setReturnDetail('')
+    setReturnEvidence(['', ''])
+    setReturnOpen(true)
+    void returnApi
+      .reasons()
+      .then((res) => {
+        if (res.reasons?.length) {
+          setReasons(res.reasons)
+          setReturnReason(res.reasons[0])
+        }
+      })
+      .catch(() => {})
+  }
+
+  async function submitReturn(event: FormEvent) {
+    event.preventDefault()
+    if (!selectedReturnItems.length) {
+      toast('เลือกสินค้าอย่างน้อย 1 รายการ')
+      return
+    }
+    setReturnBusy(true)
+    try {
+      await returnApi.create({
+        orderId: order!.id,
+        reason: returnReason,
+        reasonDetail: returnDetail,
+        itemProductIds: selectedReturnItems,
+        evidenceUrls: returnEvidence.filter(Boolean),
+        refundMethod: 'wallet',
+      })
+      toast('ส่งคำขอคืนสินค้าแล้ว — รอร้าน/แอดมินตรวจ')
+      setReturnOpen(false)
+      await refreshOrders()
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'ส่งคำขอไม่สำเร็จ')
+    } finally {
+      setReturnBusy(false)
     }
   }
 
@@ -317,24 +385,16 @@ export function OrderDetailPage() {
             </button>
           ) : null}
           {['shipping', 'to_review', 'completed'].includes(order.status) &&
-          user?.id === order.userId ? (
-            <button
-              type="button"
-              className="ghost"
-              onClick={async () => {
-                const reason = window.prompt('เหตุผลในการคืนสินค้า', 'สินค้าไม่ตรงตามที่สั่ง')
-                if (!reason) return
-                try {
-                  await returnApi.create({ orderId: order.id, reason })
-                  toast('ส่งคำขอคืนสินค้าแล้ว')
-                  await refreshOrders()
-                } catch (error) {
-                  toast(error instanceof Error ? error.message : 'ส่งคำขอไม่สำเร็จ')
-                }
-              }}
-            >
+          user?.id === order.userId &&
+          !order.returnId ? (
+            <button type="button" className="ghost" onClick={openReturnForm}>
               ขอคืนสินค้า / คืนเงิน
             </button>
+          ) : null}
+          {order.returnId ? (
+            <Link className="ghost order-detail__link-btn" to="/returns">
+              ดูสถานะคำขอคืน
+            </Link>
           ) : null}
           {(order.status === 'unpaid' || order.status === 'to_ship') &&
           user?.id === order.userId ? (
@@ -342,14 +402,99 @@ export function OrderDetailPage() {
               type="button"
               className="ghost"
               onClick={async () => {
+                const paid =
+                  order.payment?.status === 'paid' || order.paymentMethod === 'wallet'
+                const ok = window.confirm(
+                  paid
+                    ? 'ยกเลิกออเดอร์นี้? เงินที่จ่ายแล้วจะคืนเข้ากระเป๋าเงินของคุณ'
+                    : 'ยืนยันยกเลิกคำสั่งซื้อ?',
+                )
+                if (!ok) return
                 await advance('cancelled', 'ยกเลิกคำสั่งซื้อแล้ว')
-                navigate('/orders')
+                navigate(paid ? '/wallet' : '/orders')
               }}
             >
               ยกเลิกคำสั่งซื้อ
             </button>
           ) : null}
         </section>
+
+        {returnOpen ? (
+          <div className="order-return-modal" role="dialog" aria-modal="true">
+            <form className="order-return-modal__panel" onSubmit={submitReturn}>
+              <h2>ขอคืนสินค้า / คืนเงิน</h2>
+              <p>
+                เงินคืน (กรณีจ่ายออนไลน์) จะเข้ากระเป๋าเงิน · COD ไม่คืนเข้ากระเป๋า
+              </p>
+              <label>
+                เหตุผล *
+                <select
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  required
+                >
+                  {reasons.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                รายละเอียดเพิ่มเติม
+                <textarea
+                  value={returnDetail}
+                  onChange={(e) => setReturnDetail(e.target.value)}
+                  placeholder="อธิบายปัญหา / สิ่งที่ต้องการ"
+                  rows={3}
+                />
+              </label>
+              <fieldset className="order-return-modal__items">
+                <legend>เลือกสินค้าที่จะคืน</legend>
+                {order.items.map((item) => (
+                  <label key={item.productId + (item.variantId || '')}>
+                    <input
+                      type="checkbox"
+                      checked={selectedReturnItems.includes(item.productId)}
+                      onChange={(e) => {
+                        setSelectedReturnItems((prev) =>
+                          e.target.checked
+                            ? [...new Set([...prev, item.productId])]
+                            : prev.filter((id) => id !== item.productId),
+                        )
+                      }}
+                    />
+                    <span>
+                      {item.name} · {formatPrice(item.price * item.qty)}
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+              <label>
+                หลักฐานรูป 1 (แนะนำ)
+                <ImageUpload
+                  value={returnEvidence[0] || ''}
+                  onChange={(url) => setReturnEvidence((p) => [url, p[1] || ''])}
+                />
+              </label>
+              <label>
+                หลักฐานรูป 2 (ถ้ามี)
+                <ImageUpload
+                  value={returnEvidence[1] || ''}
+                  onChange={(url) => setReturnEvidence((p) => [p[0] || '', url])}
+                />
+              </label>
+              <div className="order-return-modal__actions">
+                <button type="button" className="ghost" onClick={() => setReturnOpen(false)}>
+                  ยกเลิก
+                </button>
+                <button type="submit" disabled={returnBusy}>
+                  {returnBusy ? 'กำลังส่ง...' : 'ส่งคำขอ'}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : null}
       </main>
     </div>
   )

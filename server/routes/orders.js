@@ -1,7 +1,9 @@
 import { Router } from 'express'
 import {
   createId,
+  creditBuyerWallet,
   creditShopPending,
+  debitBuyerWallet,
   getDb,
   getShopById,
   getShopByOwner,
@@ -181,7 +183,11 @@ router.post('/checkout', requireAuth, (req, res) => {
   }
 
   const payFlags = db.settings?.paymentMethods || { cod: true, transfer: true, card: true }
-  if (!['cod', 'transfer', 'card'].includes(paymentMethod) || payFlags[paymentMethod] === false) {
+  const allowedPay = ['cod', 'transfer', 'card', 'wallet']
+  if (!allowedPay.includes(paymentMethod)) {
+    return res.status(400).json({ ok: false, message: 'วิธีชำระเงินนี้ไม่เปิดใช้งาน' })
+  }
+  if (paymentMethod !== 'wallet' && payFlags[paymentMethod] === false) {
     return res.status(400).json({ ok: false, message: 'วิธีชำระเงินนี้ไม่เปิดใช้งาน' })
   }
 
@@ -331,12 +337,15 @@ router.post('/checkout', requireAuth, (req, res) => {
     }
   }
 
-  const status = paymentMethod === 'cod' ? 'to_ship' : 'unpaid'
+  const status =
+    paymentMethod === 'cod' || paymentMethod === 'wallet' ? 'to_ship' : 'unpaid'
   const settings = db.settings
   const created = []
   let shippingAssigned = false
   let discountLeft = isShopVoucher ? 0 : grandDiscount
 
+  // คำนวณยอดรวมก่อน — ถ้าใช้ wallet ต้องหักก่อนสร้างออเดอร์
+  const previewTotals = []
   shopEntries.forEach(([shopId, shopItems], index) => {
     const subtotal = shopItems.reduce((s, i) => s + i.price * i.qty, 0)
     let discount = 0
@@ -351,8 +360,33 @@ router.post('/checkout', requireAuth, (req, res) => {
     }
     const shippingFee = !shippingAssigned ? grandShipping : 0
     if (!shippingAssigned && grandShipping > 0) shippingAssigned = true
-    const total = Math.max(0, subtotal + shippingFee - discount)
+    previewTotals.push({
+      shopId,
+      shopItems,
+      subtotal,
+      discount,
+      shippingFee,
+      total: Math.max(0, subtotal + shippingFee - discount),
+    })
+  })
 
+  const cartTotal = previewTotals.reduce((s, row) => s + row.total, 0)
+  if (paymentMethod === 'wallet') {
+    try {
+      debitBuyerWallet(req.user.id, cartTotal, {
+        refType: 'order_checkout',
+        note: 'ชำระด้วยกระเป๋าเงิน',
+      })
+    } catch (error) {
+      return res.status(400).json({
+        ok: false,
+        message: error?.message || 'ยอดในกระเป๋าไม่พอ',
+      })
+    }
+  }
+
+  previewTotals.forEach((row) => {
+    const { shopId, shopItems, subtotal, discount, shippingFee, total } = row
     const order = {
       id: createId('ord'),
       userId: req.user.id,
@@ -372,20 +406,30 @@ router.post('/checkout', requireAuth, (req, res) => {
       payment:
         paymentMethod === 'cod'
           ? { status: 'cod', paidAt: null }
-          : {
-              status: 'pending',
-              paidAt: null,
-              promptPay: {
-                phone: settings.promptPayPhone,
-                amount: total,
-                ref: createId('pay'),
+          : paymentMethod === 'wallet'
+            ? {
+                status: 'paid',
+                paidAt: new Date().toISOString(),
+                method: 'wallet',
+                history: [{ at: new Date().toISOString(), event: 'paid', method: 'wallet' }],
+              }
+            : {
+                status: 'pending',
+                paidAt: null,
+                promptPay: {
+                  phone: settings.promptPayPhone,
+                  amount: total,
+                  ref: createId('pay'),
+                },
+                bankAccount: settings.bankAccount,
               },
-              bankAccount: settings.bankAccount,
-            },
     }
 
     ensureSettlements(order)
     if (status === 'to_ship') creditPending(order)
+    if (paymentMethod === 'wallet') {
+      order.payment.history[0].note = `ออเดอร์ ${order.id}`
+    }
     db.orders.unshift(order)
     created.push(order)
 
@@ -546,9 +590,36 @@ router.patch('/:id/status', requireAuth, (req, res) => {
   }
 
   const prev = order.status
+  let refundedToWallet = 0
   if (status === 'cancelled' && prev !== 'cancelled' && ['unpaid', 'to_ship'].includes(prev)) {
     restoreStock(order)
     if (prev === 'to_ship') reverseSettlements(order)
+    // ลูกค้าสแกนจ่ายแล้ว / จ่ายด้วย wallet แต่ร้านยังไม่ส่ง → คืนเข้ากระเป๋า
+    const paid =
+      order.payment?.status === 'paid' ||
+      order.paymentMethod === 'wallet' ||
+      (order.paymentMethod !== 'cod' && prev === 'to_ship' && order.payment?.status === 'paid')
+    if (paid && order.payment?.status !== 'refunded') {
+      refundedToWallet = order.total
+      creditBuyerWallet(order.userId, order.total, {
+        refType: 'order_cancel',
+        refId: order.id,
+        note: `ยกเลิกออเดอร์ ${order.id} — คืนเข้ากระเป๋า`,
+      })
+      order.payment = {
+        ...(order.payment || {}),
+        status: 'refunded',
+        history: [
+          ...((order.payment && order.payment.history) || []),
+          {
+            at: new Date().toISOString(),
+            event: 'refunded',
+            method: 'wallet',
+            note: 'ยกเลิกก่อนจัดส่ง คืนเข้ากระเป๋าลูกค้า',
+          },
+        ],
+      }
+    }
   }
 
   order.status = status
@@ -570,16 +641,20 @@ router.patch('/:id/status', requireAuth, (req, res) => {
   if (status === 'shipping' && order.trackingNumber) {
     body += ` · ${order.carrier} ${order.trackingNumber}`
   }
+  if (refundedToWallet > 0) {
+    body += ` · คืนเข้ากระเป๋า ฿${refundedToWallet.toLocaleString('th-TH')}`
+  }
 
   pushNotification(order.userId, {
     type: 'order',
-    title: 'อัปเดตสถานะคำสั่งซื้อ',
+    title:
+      refundedToWallet > 0 ? 'ยกเลิกแล้ว — คืนเงินเข้ากระเป๋า' : 'อัปเดตสถานะคำสั่งซื้อ',
     body,
-    link: `/orders/${order.id}`,
+    link: refundedToWallet > 0 ? '/wallet' : `/orders/${order.id}`,
   })
 
   persist()
-  res.json({ ok: true, order })
+  res.json({ ok: true, order, refundedToWallet })
 })
 
 router.post('/:id/zort/ship', requireAuth, async (req, res) => {

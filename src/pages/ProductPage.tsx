@@ -183,6 +183,7 @@ export function ProductPage() {
             images={images}
             index={activeImage}
             alt={product.name}
+            productId={product.id}
             onClose={() => setLightboxOpen(false)}
             onIndexChange={setActiveImage}
           />
@@ -252,16 +253,6 @@ export function ProductPage() {
             <p>{product.description}</p>
           </section>
         ) : null}
-        <section className="product-page__similar section">
-          <button
-            type="button"
-            className="product-page__similar-btn"
-            onClick={() => navigate(`/search/visual?productId=${product.id}`)}
-          >
-            หาของคล้ายกันจากรูปนี้
-          </button>
-          <p>ไม่ถูกใจชิ้นนี้? สแกนโทนสี/สไตล์เพื่อหาตัวเลือกใกล้เคียงในร้าน</p>
-        </section>
         <section className="product-page__ship section">
           <h2>การจัดส่ง</h2>
           <p>

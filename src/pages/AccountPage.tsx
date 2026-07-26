@@ -26,6 +26,8 @@ export function AccountPage() {
       title: 'บัญชีของฉัน',
       items: [
         { label: 'แชทกับร้าน', to: user ? '/chats' : '/login' },
+        { label: 'กระเป๋าเงิน (คืนเงิน)', to: user ? '/wallet' : '/login' },
+        { label: 'คืนสินค้า / คืนเงิน', to: user ? '/returns' : '/login' },
         { label: `คูปองของฉัน (${claimedVouchers.length})`, to: '/vouchers' },
         { label: `สินค้าที่ถูกใจ (${wishlist.length})`, to: '/wishlist' },
         { label: 'ที่อยู่จัดส่ง', to: user ? '/addresses' : '/login' },

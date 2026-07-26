@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { paymentApi } from '../api'
+import { paymentApi, walletApi } from '../api'
 import { PageHeader } from '../components/layout/PageHeader'
 import { formatPrice } from '../data/catalog'
 import { cartLineKey } from '../api/types'
@@ -27,6 +27,7 @@ export function CheckoutPage() {
   const [paymentMethods, setPaymentMethods] = useState<PayMethod[]>([])
   const [paymentMethod, setPaymentMethod] = useState<ApiOrder['paymentMethod']>('cod')
   const [voucherCode, setVoucherCode] = useState('')
+  const [walletBalance, setWalletBalance] = useState(0)
 
   useEffect(() => {
     if (!addressId && defaultAddress) setAddressId(defaultAddress.id)
@@ -49,6 +50,10 @@ export function CheckoutPage() {
           { id: 'card', name: 'บัตรเครดิต/เดบิต', description: '' },
         ])
       })
+    void walletApi
+      .buyerMine()
+      .then((res) => setWalletBalance(res.wallet.balance || 0))
+      .catch(() => setWalletBalance(0))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount
   }, [])
 
@@ -224,7 +229,26 @@ export function CheckoutPage() {
 
         <section className="checkout-card">
           <h2>วิธีชำระเงิน</h2>
-          {paymentMethods.length === 0 ? (
+          {walletBalance > 0 ? (
+            <label className="checkout-pay">
+              <input
+                type="radio"
+                name="payment"
+                checked={paymentMethod === 'wallet'}
+                onChange={() => setPaymentMethod('wallet')}
+                disabled={walletBalance < total}
+              />
+              <span>
+                กระเป๋าเงิน (ยอด {formatPrice(walletBalance)})
+                <em style={{ display: 'block', fontSize: 12, color: '#6b7280', fontStyle: 'normal' }}>
+                  {walletBalance < total
+                    ? 'ยอดไม่พอสำหรับออเดอร์นี้'
+                    : 'ใช้เงินคืนจากการยกเลิก/คืนสินค้า'}
+                </em>
+              </span>
+            </label>
+          ) : null}
+          {paymentMethods.length === 0 && walletBalance <= 0 ? (
             <p className="checkout-card__hint">ยังไม่มีวิธีชำระเงินที่เปิดใช้งาน</p>
           ) : (
             paymentMethods.map((method) => (

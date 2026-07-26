@@ -31,7 +31,9 @@ export function SellerReturnsPage() {
   return (
     <div className="seller-page">
       <h1>คืนสินค้า</h1>
-      <p className="seller-page__sub">คำขอคืนจากลูกค้าของร้านคุณ</p>
+      <p className="seller-page__sub">
+        คำขอคืนจากลูกค้า — อนุมัติแล้วระบบคืนเงินเข้ากระเป๋าลูกค้า (ถ้าจ่ายออนไลน์) และหักยอดร้าน
+      </p>
       <div className="seller-card">
         {items.length === 0 ? (
           <p style={{ color: '#6b7280' }}>ยังไม่มีคำขอ</p>
@@ -40,7 +42,7 @@ export function SellerReturnsPage() {
             <thead>
               <tr>
                 <th>ออเดอร์</th>
-                <th>เหตุผล</th>
+                <th>เหตุผล / หลักฐาน</th>
                 <th>ยอด</th>
                 <th>สถานะ</th>
                 <th></th>
@@ -50,7 +52,25 @@ export function SellerReturnsPage() {
               {items.map((item) => (
                 <tr key={item.id}>
                   <td>{item.orderId}</td>
-                  <td>{item.reason}</td>
+                  <td>
+                    <div>{item.reason}</div>
+                    {item.reasonDetail ? (
+                      <div style={{ color: '#6b7280', fontSize: 12 }}>{item.reasonDetail}</div>
+                    ) : null}
+                    {item.evidenceUrls?.length ? (
+                      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                        {item.evidenceUrls.map((url) => (
+                          <a key={url} href={url} target="_blank" rel="noreferrer">
+                            <img
+                              src={url}
+                              alt=""
+                              style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }}
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                  </td>
                   <td>{formatPrice(item.amount)}</td>
                   <td>{item.status}</td>
                   <td>

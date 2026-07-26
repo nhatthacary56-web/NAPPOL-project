@@ -23,6 +23,8 @@ import { WishlistPage } from './pages/WishlistPage'
 import { VouchersPage } from './pages/VouchersPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AddressesPage } from './pages/AddressesPage'
+import { BuyerWalletPage } from './pages/BuyerWalletPage'
+import { BuyerReturnsPage } from './pages/BuyerReturnsPage'
 import { HelpCenterPage } from './pages/HelpCenterPage'
 import { AdminShell } from './pages/admin/AdminShell'
 import { AdminLoginPage } from './pages/admin/AdminLoginPage'
@@ -120,6 +122,22 @@ export default function App() {
       <Route path="register" element={<RegisterPage />} />
       <Route path="wishlist" element={<WishlistPage />} />
       <Route path="vouchers" element={<VouchersPage />} />
+      <Route
+        path="wallet"
+        element={
+          <RequireAuth>
+            <BuyerWalletPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="returns"
+        element={
+          <RequireAuth>
+            <BuyerReturnsPage />
+          </RequireAuth>
+        }
+      />
       <Route path="help" element={<HelpCenterPage />} />
       <Route path="privacy" element={<LegalPage kind="privacy" />} />
       <Route path="terms" element={<LegalPage kind="terms" />} />

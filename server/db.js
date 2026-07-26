@@ -134,6 +134,8 @@ function emptyDb() {
     notifications: [],
     chats: [],
     wallets: [],
+    buyerWallets: [],
+    walletLedger: [],
     withdrawals: [],
     returns: [],
     categories: seedCategories,
@@ -640,6 +642,8 @@ function migrate(data) {
   if (!Array.isArray(data.notifications)) data.notifications = []
   if (!Array.isArray(data.chats)) data.chats = []
   if (!Array.isArray(data.wallets)) data.wallets = []
+  if (!Array.isArray(data.buyerWallets)) data.buyerWallets = []
+  if (!Array.isArray(data.walletLedger)) data.walletLedger = []
   if (!Array.isArray(data.withdrawals)) data.withdrawals = []
   if (!Array.isArray(data.returns)) data.returns = []
   if (!Array.isArray(data.userVouchers)) data.userVouchers = []
@@ -916,6 +920,66 @@ export function releaseShopPending(shopId, amount) {
 export function reverseShopPending(shopId, amount) {
   const wallet = getWallet(shopId)
   wallet.pending = Math.max(0, wallet.pending - amount)
+}
+
+export function getBuyerWallet(userId) {
+  if (!Array.isArray(db.buyerWallets)) db.buyerWallets = []
+  let wallet = db.buyerWallets.find((w) => w.userId === userId)
+  if (!wallet) {
+    wallet = {
+      userId,
+      balance: 0,
+      totalCredited: 0,
+      totalDebited: 0,
+    }
+    db.buyerWallets.push(wallet)
+  }
+  return wallet
+}
+
+export function creditBuyerWallet(userId, amount, meta = {}) {
+  const amt = Math.max(0, Math.round(Number(amount) || 0))
+  if (amt <= 0) return getBuyerWallet(userId)
+  const wallet = getBuyerWallet(userId)
+  wallet.balance += amt
+  wallet.totalCredited += amt
+  if (!Array.isArray(db.walletLedger)) db.walletLedger = []
+  db.walletLedger.unshift({
+    id: uid('led'),
+    userId,
+    type: 'credit',
+    amount: amt,
+    refType: meta.refType || null,
+    refId: meta.refId || null,
+    note: meta.note || '',
+    createdAt: new Date().toISOString(),
+  })
+  return wallet
+}
+
+export function debitBuyerWallet(userId, amount, meta = {}) {
+  const amt = Math.max(0, Math.round(Number(amount) || 0))
+  const wallet = getBuyerWallet(userId)
+  if (amt <= 0) return wallet
+  if (wallet.balance < amt) {
+    const err = new Error('ยอดในกระเป๋าไม่พอ')
+    err.code = 'INSUFFICIENT'
+    throw err
+  }
+  wallet.balance -= amt
+  wallet.totalDebited += amt
+  if (!Array.isArray(db.walletLedger)) db.walletLedger = []
+  db.walletLedger.unshift({
+    id: uid('led'),
+    userId,
+    type: 'debit',
+    amount: amt,
+    refType: meta.refType || null,
+    refId: meta.refId || null,
+    note: meta.note || '',
+    createdAt: new Date().toISOString(),
+  })
+  return wallet
 }
 
 export function createId(prefix) {

@@ -32,7 +32,8 @@ export function AdminReturnsPage() {
     <div className="admin-page">
       <h1>คืนสินค้า / คืนเงิน</h1>
       <p className="admin-page__sub">
-        ตรวจคำขอยกเลิกหลังรับของ — อนุมัติแล้วระบบจะคืนสต็อกและหักยอดกระเป๋าเงินร้าน
+        ตรวจคำขอคืนหลังจัดส่ง — อนุมัติแล้วคืนสต็อก หักยอดร้าน และคืนเงินเข้ากระเป๋าลูกค้า
+        (กรณีจ่ายออนไลน์)
       </p>
       <div className="admin-card">
         {items.length === 0 ? (
@@ -42,7 +43,7 @@ export function AdminReturnsPage() {
             <thead>
               <tr>
                 <th>ออเดอร์</th>
-                <th>เหตุผล</th>
+                <th>เหตุผล / หลักฐาน</th>
                 <th>ยอด</th>
                 <th>สถานะ</th>
                 <th></th>
@@ -57,7 +58,30 @@ export function AdminReturnsPage() {
                       {item.shopName} · {new Date(item.createdAt).toLocaleString('th-TH')}
                     </div>
                   </td>
-                  <td>{item.reason}</td>
+                  <td>
+                    <div>{item.reason}</div>
+                    {item.reasonDetail ? (
+                      <div style={{ color: '#6b7280', fontSize: 12 }}>{item.reasonDetail}</div>
+                    ) : null}
+                    {item.evidenceUrls && item.evidenceUrls.length > 0 ? (
+                      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                        {item.evidenceUrls.map((url) => (
+                          <a key={url} href={url} target="_blank" rel="noreferrer">
+                            <img
+                              src={url}
+                              alt=""
+                              style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                    {item.refundedToWallet ? (
+                      <div style={{ color: '#059669', fontSize: 12, marginTop: 4 }}>
+                        คืนกระเป๋าลูกค้า {formatPrice(item.refundedToWallet)}
+                      </div>
+                    ) : null}
+                  </td>
                   <td>{formatPrice(item.amount)}</td>
                   <td>{item.status}</td>
                   <td>
