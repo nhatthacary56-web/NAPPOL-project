@@ -1,4 +1,4 @@
-import { api, setToken, getToken } from './client'
+import { api, setToken, getToken, apiUrl } from './client'
 import type {
   ApiAddress,
   ApiBanner,
@@ -139,7 +139,7 @@ export const catalogApi = {
     const headers = new Headers()
     const token = getToken()
     if (token) headers.set('Authorization', `Bearer ${token}`)
-    const res = await fetch('/api/products/visual-search', {
+    const res = await fetch(apiUrl('/api/products/visual-search'), {
       method: 'POST',
       headers,
       body: form,
@@ -362,7 +362,7 @@ export const uploadApi = {
     const headers = new Headers()
     const token = getToken()
     if (token) headers.set('Authorization', `Bearer ${token}`)
-    const res = await fetch('/api/upload', { method: 'POST', headers, body: form })
+    const res = await fetch(apiUrl('/api/upload'), { method: 'POST', headers, body: form })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.message || 'อัปโหลดไม่สำเร็จ')
     return data as {

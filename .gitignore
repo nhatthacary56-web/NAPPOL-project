@@ -11,3 +11,16 @@ dist-ssr
 server/data
 server/uploads/*
 !server/uploads/.gitkeep
+
+# Android / Capacitor
+android/.gradle
+android/app/build
+android/build
+android/captures
+android/local.properties
+android/*.iml
+android/.idea
+*.keystore
+*.jks
+*.apk
+*.aab

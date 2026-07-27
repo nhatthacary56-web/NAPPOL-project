@@ -1,5 +1,16 @@
 const TOKEN_KEY = 'great.token'
 
+/** Empty in web/dev (same-origin). Set VITE_API_BASE_URL for embedded Capacitor builds. */
+export function apiBase(): string {
+  return String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+}
+
+export function apiUrl(path: string): string {
+  const p = path.startsWith('/') ? path : `/${path}`
+  const base = apiBase()
+  return base ? `${base}${p}` : p
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
@@ -28,7 +39,8 @@ export async function api<T>(
   const token = getToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
-  const res = await fetch(path.startsWith('/api') ? path : `/api${path}`, {
+  const endpoint = path.startsWith('/api') ? path : `/api${path}`
+  const res = await fetch(apiUrl(endpoint), {
     ...options,
     headers,
     body: options.json !== undefined ? JSON.stringify(options.json) : options.body,
