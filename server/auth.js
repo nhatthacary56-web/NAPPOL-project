@@ -46,6 +46,14 @@ export function requireAuth(req, res, next) {
       res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบ' })
       return
     }
+    if (req.user.deletedAt) {
+      res.status(403).json({ ok: false, message: 'บัญชีนี้ถูกลบแล้ว' })
+      return
+    }
+    if (req.user.banned) {
+      res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
+      return
+    }
     next()
   })
 }

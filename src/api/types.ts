@@ -245,7 +245,7 @@ export type PlatformSettings = {
   }
   freeShippingMin?: number
   shippingFee?: number
-  paymentMethods?: { cod: boolean; transfer: boolean; card: boolean }
+  paymentMethods?: { cod: boolean; transfer: boolean; card?: boolean }
   carriers?: string[]
   defaultCarrier?: string
 }

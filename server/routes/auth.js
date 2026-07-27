@@ -59,6 +59,12 @@ function dbUser(req) {
   return getDb().users.find((u) => u.id === req.user.id)
 }
 
+function blockedAccountMessage(user) {
+  if (user?.deletedAt) return 'บัญชีนี้ถูกลบแล้ว'
+  if (user?.banned) return 'บัญชีถูกระงับ'
+  return null
+}
+
 async function resolveGoogleIdentity(body) {
   const providers = authProviders()
   const { credential, demoEmail, demoName } = body ?? {}
@@ -271,7 +277,8 @@ router.post('/login', authLoginLimiter, (req, res) => {
   if (user.role === 'admin') {
     return res.status(401).json({ ok: false, message: GENERIC_LOGIN_FAIL })
   }
-  if (user.banned) return res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
+  const blocked = blockedAccountMessage(user)
+  if (blocked) return res.status(403).json({ ok: false, message: blocked })
   res.json(issueSession(user))
 })
 
@@ -293,7 +300,8 @@ router.post('/admin-login', authLoginLimiter, (req, res) => {
   ) {
     return res.status(401).json({ ok: false, message: GENERIC_LOGIN_FAIL })
   }
-  if (user.banned) return res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
+  const blocked = blockedAccountMessage(user)
+  if (blocked) return res.status(403).json({ ok: false, message: blocked })
   res.json({ ...issueSession(user), message: 'เข้าสู่ระบบแอดมินสำเร็จ' })
 })
 
@@ -336,7 +344,8 @@ router.post('/otp/verify', (req, res) => {
   }
   db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
   const user = ensureBuyerByPhone(phone, req.body?.name)
-  if (user.banned) return res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
+  const blocked = blockedAccountMessage(user)
+  if (blocked) return res.status(403).json({ ok: false, message: blocked })
   persist()
   res.json({ ...issueSession(user), message: 'เข้าสู่ระบบด้วยเบอร์สำเร็จ' })
 })
@@ -377,7 +386,8 @@ router.post('/oauth/google', async (req, res) => {
       email,
       name,
     })
-    if (user.banned) return res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
+    const blocked = blockedAccountMessage(user)
+    if (blocked) return res.status(403).json({ ok: false, message: blocked })
     res.json({ ...issueSession(user), message: 'เข้าสู่ระบบด้วย Google สำเร็จ' })
   } catch (error) {
     res.status(500).json({
@@ -462,7 +472,8 @@ router.post('/oauth/line', async (req, res) => {
       name,
       email: `line_${lineId}@users.great.app`,
     })
-    if (user.banned) return res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
+    const blocked = blockedAccountMessage(user)
+    if (blocked) return res.status(403).json({ ok: false, message: blocked })
     res.json({ ...issueSession(user), message: 'เข้าสู่ระบบด้วย LINE สำเร็จ' })
   } catch (error) {
     res.status(500).json({
@@ -613,6 +624,85 @@ router.post('/password', requireAuth, (req, res) => {
   }
   persist()
   res.json({ ok: true, user: publicUser(user), message: 'ตั้งรหัสผ่านสำเร็จ' })
+})
+
+/** Soft-delete สำหรับ Play / PDPA — ลบข้อมูลส่วนตัว แต่เก็บออเดอร์ประวัติไว้แบบไม่ระบุตัวตน */
+router.post('/me/delete', requireAuth, (req, res) => {
+  const confirm = String(req.body?.confirm || '').trim().toUpperCase()
+  if (confirm !== 'DELETE') {
+    return res.status(400).json({
+      ok: false,
+      message: 'พิมพ์ยืนยัน DELETE เพื่อลบบัญชี',
+    })
+  }
+  const db = getDb()
+  const user = db.users.find((u) => u.id === req.user.id)
+  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
+  if (user.role === 'admin') {
+    return res.status(403).json({ ok: false, message: 'ไม่สามารถลบบัญชีแอดมินได้' })
+  }
+  if (user.deletedAt) {
+    return res.json({ ok: true, message: 'บัญชีถูกลบไปแล้ว' })
+  }
+
+  const openStatuses = new Set(['unpaid', 'to_ship', 'shipping'])
+  const openOrders = (db.orders || []).filter(
+    (o) => o.userId === user.id && openStatuses.has(o.status),
+  )
+  if (openOrders.length > 0) {
+    return res.status(400).json({
+      ok: false,
+      message: `ยังมีออเดอร์ที่กำลังดำเนินการ ${openOrders.length} รายการ — ยกเลิกหรือรอให้เสร็จก่อนลบบัญชี`,
+    })
+  }
+  const openReturns = (db.returns || []).filter(
+    (r) =>
+      r.userId === user.id &&
+      !['approved', 'rejected', 'refunded', 'cancelled', 'closed'].includes(r.status),
+  )
+  if (openReturns.length > 0) {
+    return res.status(400).json({
+      ok: false,
+      message: `ยังมีคำขอคืนสินค้าค้างอยู่ ${openReturns.length} รายการ — รอให้เสร็จก่อนลบบัญชี`,
+    })
+  }
+
+  const shop = getShopByOwner(user.id)
+  if (shop) {
+    shop.active = false
+    shop.vacationMode = true
+    shop.name = shop.name ? `${shop.name} (ปิดแล้ว)` : 'ร้านที่ปิดแล้ว'
+  }
+
+  const stamp = Date.now()
+  user.deletedAt = new Date(stamp).toISOString()
+  user.banned = true
+  user.name = 'บัญชีที่ลบแล้ว'
+  user.email = `deleted+${user.id}@invalid.local`
+  user.phone = ''
+  user.passwordHash = bcrypt.hashSync(`deleted-${user.id}-${stamp}`, 10)
+  user.passwordSet = false
+  delete user.googleId
+  delete user.lineId
+  user.authProvider = 'deleted'
+
+  if (db.carts && db.carts[user.id]) delete db.carts[user.id]
+  if (Array.isArray(db.addresses)) {
+    db.addresses = db.addresses.filter((a) => a.userId !== user.id)
+  }
+  if (Array.isArray(db.userVouchers)) {
+    db.userVouchers = db.userVouchers.filter((c) => c.userId !== user.id)
+  }
+  if (Array.isArray(db.buyerWallets)) {
+    const wallet = db.buyerWallets.find((w) => w.userId === user.id)
+    if (wallet) {
+      wallet.balance = 0
+      wallet.deleted = true
+    }
+  }
+
+  persist()
+  res.json({ ok: true, message: 'ลบบัญชีเรียบร้อยแล้ว' })
 })
 
 export default router

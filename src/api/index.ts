@@ -107,6 +107,11 @@ export const authApi = {
       method: 'POST',
       json: body,
     }),
+  deleteAccount: (body?: { confirm?: string }) =>
+    api<{ ok: true; message: string }>('/auth/me/delete', {
+      method: 'POST',
+      json: body || { confirm: 'DELETE' },
+    }),
   logout: () => setToken(null),
 }
 

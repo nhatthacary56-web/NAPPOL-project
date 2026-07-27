@@ -8,26 +8,21 @@ const METHOD_META = {
   cod: {
     id: 'cod',
     name: 'เก็บเงินปลายทาง',
-    description: 'ชำระเมื่อได้รับสินค้า',
+    description: 'ชำระเงินสดเมื่อได้รับสินค้า',
   },
   transfer: {
     id: 'transfer',
-    name: 'PromptPay / โอนธนาคาร',
-    description: 'สแกน QR หรือโอนเข้าบัญชีแพลตฟอร์ม',
-  },
-  card: {
-    id: 'card',
-    name: 'บัตรเครดิต/เดบิต (จำลอง)',
-    description: 'ชำระผ่านเกตเวย์จำลองทันที',
+    name: 'สแกน QR / PromptPay',
+    description: 'สแกน QR หรือโอนเข้าบัญชีแพลตฟอร์ม แล้วกดยืนยัน',
   },
 }
 
 router.get('/methods', requireAuth, (_req, res) => {
   const db = getDb()
   const s = db.settings
-  const flags = s.paymentMethods || { cod: true, transfer: true, card: true }
+  const flags = s.paymentMethods || { cod: true, transfer: true, card: false }
   const methods = []
-  for (const key of ['cod', 'transfer', 'card']) {
+  for (const key of ['cod', 'transfer']) {
     if (flags[key] === false) continue
     const base = METHOD_META[key]
     if (key === 'transfer') {

@@ -214,7 +214,7 @@ export function OrderDetailPage() {
         {order.status === 'unpaid' &&
         (order.paymentMethod === 'transfer' || order.payment?.promptPay) ? (
           <section className="order-detail__card order-detail__pay">
-            <h2>ชำระเงิน PromptPay / โอนธนาคาร</h2>
+            <h2>สแกน QR / PromptPay</h2>
             {order.payment?.promptPay ? (
               <>
                 <p>โอน PromptPay ไปหมายเลข {order.payment.promptPay.phone}</p>
@@ -222,6 +222,20 @@ export function OrderDetailPage() {
                   ยอด {formatPrice(order.payment.promptPay.amount)} · อ้างอิง{' '}
                   {order.payment.promptPay.ref}
                 </p>
+                <div className="order-detail__qr">
+                  <img
+                    src={`https://promptpay.io/${encodeURIComponent(
+                      String(order.payment.promptPay.phone).replace(/\D/g, ''),
+                    )}/${Number(order.payment.promptPay.amount).toFixed(2)}.png`}
+                    alt="QR PromptPay"
+                    width={220}
+                    height={220}
+                    style={{ display: 'block', margin: '8px auto', borderRadius: 8 }}
+                  />
+                  <p className="muted" style={{ textAlign: 'center', fontSize: 12 }}>
+                    สแกนด้วยแอปธนาคาร · ตรวจยอดก่อนยืนยัน
+                  </p>
+                </div>
               </>
             ) : null}
             {order.payment?.bankAccount ? (
@@ -231,9 +245,6 @@ export function OrderDetailPage() {
                 {order.payment.bankAccount.accountName}
               </p>
             ) : null}
-            <div className="order-detail__qr" aria-hidden="true">
-              QR
-            </div>
             <label className="order-detail__slip">
               หมายเหตุสลิป (ถ้ามี)
               <input
@@ -243,18 +254,17 @@ export function OrderDetailPage() {
               />
             </label>
             <button type="button" onClick={() => void onPay()}>
-              ยืนยันว่าโอนแล้ว (จำลอง)
+              ยืนยันว่าโอนแล้ว
             </button>
           </section>
         ) : null}
 
         {order.status === 'unpaid' && order.paymentMethod === 'card' ? (
           <section className="order-detail__card order-detail__pay">
-            <h2>ชำระด้วยบัตร (จำลอง)</h2>
-            <p>ยอด {formatPrice(order.total)}</p>
-            <button type="button" onClick={() => void onPay()}>
-              ชำระเงินจำลอง
-            </button>
+            <h2>วิธีชำระนี้ไม่รองรับแล้ว</h2>
+            <p className="muted">
+              แพลตฟอร์มรับเฉพาะเก็บเงินปลายทางและสแกน QR — ยกเลิกออเดอร์นี้แล้วสั่งใหม่ด้วยวิธีที่เปิดอยู่
+            </p>
           </section>
         ) : null}
 

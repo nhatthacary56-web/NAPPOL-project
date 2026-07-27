@@ -158,6 +158,7 @@ type StoreContextValue = {
     currentPassword?: string
     newPassword: string
   }) => Promise<{ ok: boolean; message: string }>
+  deleteAccount: () => Promise<{ ok: boolean; message: string }>
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null)
@@ -607,6 +608,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const deleteAccount = useCallback(async () => {
+    try {
+      const res = await authApi.deleteAccount({ confirm: 'DELETE' })
+      setToken(null)
+      setUser(null)
+      setShop(null)
+      setCart([])
+      return { ok: true, message: res.message || 'ลบบัญชีแล้ว' }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'ลบบัญชีไม่สำเร็จ',
+      }
+    }
+  }, [])
+
   const addToCart = useCallback(
     (productId: string, qty = 1, variant?: { id: string; name: string } | null) => {
       const variantId = variant?.id || null
@@ -912,6 +929,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       unlinkLine,
       linkPhone,
       setPassword,
+      deleteAccount,
       refreshSession,
       cart,
       cartCount,
@@ -978,6 +996,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       unlinkLine,
       linkPhone,
       setPassword,
+      deleteAccount,
       refreshSession,
       cart,
       cartCount,

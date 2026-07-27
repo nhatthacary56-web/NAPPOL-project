@@ -40,6 +40,7 @@ export function SettingsPage() {
     unlinkLine,
     linkPhone,
     setPassword,
+    deleteAccount,
   } = useStore()
   const { toast } = useToast()
   const [name, setName] = useState(user?.name ?? '')
@@ -50,6 +51,7 @@ export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
   const [providers, setProviders] = useState<Providers | null>(null)
   const googleBtnRef = useRef<HTMLDivElement>(null)
 
@@ -387,6 +389,42 @@ export function SettingsPage() {
             </button>
           </form>
         </section>
+
+        {me.role !== 'admin' ? (
+          <section className="settings-card settings-danger">
+            <h2>ลบบัญชี</h2>
+            <p className="settings-hint">
+              ลบข้อมูลส่วนตัวถาวร (ชื่อ อีเมล เบอร์ ที่อยู่ ตะกร้า) — ออเดอร์เก่ายังอยู่ในระบบแบบไม่ระบุตัวตน
+              ต้องไม่มีออเดอร์ที่กำลังดำเนินการ
+            </p>
+            <label>
+              พิมพ์ DELETE เพื่อยืนยัน
+              <input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="DELETE"
+                autoComplete="off"
+              />
+            </label>
+            <button
+              type="button"
+              className="settings-danger-btn"
+              disabled={busy || deleteConfirm.trim().toUpperCase() !== 'DELETE'}
+              onClick={() => {
+                void (async () => {
+                  if (!window.confirm('ยืนยันลบบัญชี? การกระทำนี้ย้อนกลับไม่ได้')) return
+                  setBusy(true)
+                  const result = await deleteAccount()
+                  setBusy(false)
+                  toast(result.message)
+                  if (result.ok) window.location.href = '/'
+                })()
+              }}
+            >
+              ลบบัญชีถาวร
+            </button>
+          </section>
+        ) : null}
 
         <section className="settings-card settings-links">
           <Link to="/privacy">นโยบายความเป็นส่วนตัว</Link>

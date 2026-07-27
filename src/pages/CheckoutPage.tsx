@@ -45,9 +45,8 @@ export function CheckoutPage() {
       })
       .catch(() => {
         setPaymentMethods([
-          { id: 'cod', name: 'เก็บเงินปลายทาง', description: '' },
-          { id: 'transfer', name: 'โอนผ่านธนาคาร', description: '' },
-          { id: 'card', name: 'บัตรเครดิต/เดบิต', description: '' },
+          { id: 'cod', name: 'เก็บเงินปลายทาง', description: 'ชำระเมื่อได้รับสินค้า' },
+          { id: 'transfer', name: 'สแกน QR / PromptPay', description: 'โอนแล้วกดยืนยัน' },
         ])
       })
     void walletApi

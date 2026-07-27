@@ -182,10 +182,13 @@ router.post('/checkout', requireAuth, (req, res) => {
     return res.status(400).json({ ok: false, message: 'ไม่มีสินค้าในคำสั่งซื้อ' })
   }
 
-  const payFlags = db.settings?.paymentMethods || { cod: true, transfer: true, card: true }
-  const allowedPay = ['cod', 'transfer', 'card', 'wallet']
+  const payFlags = db.settings?.paymentMethods || { cod: true, transfer: true, card: false }
+  const allowedPay = ['cod', 'transfer', 'wallet']
   if (!allowedPay.includes(paymentMethod)) {
-    return res.status(400).json({ ok: false, message: 'วิธีชำระเงินนี้ไม่เปิดใช้งาน' })
+    return res.status(400).json({
+      ok: false,
+      message: 'รองรับเฉพาะเก็บเงินปลายทาง, สแกน QR/โอน หรือกระเป๋าเงิน',
+    })
   }
   if (paymentMethod !== 'wallet' && payFlags[paymentMethod] === false) {
     return res.status(400).json({ ok: false, message: 'วิธีชำระเงินนี้ไม่เปิดใช้งาน' })
@@ -490,7 +493,7 @@ router.post('/:id/pay', requireAuth, (req, res) => {
     status: 'paid',
     paidAt: new Date().toISOString(),
     method,
-    note: slipNote || (method === 'card' ? 'ชำระบัตรจำลองสำเร็จ' : 'ยืนยันโอนเงินจำลองสำเร็จ'),
+    note: slipNote || 'ยืนยันโอนผ่าน QR/PromptPay แล้ว',
     history: [
       ...((order.payment && order.payment.history) || []),
       {

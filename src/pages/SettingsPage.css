@@ -138,3 +138,27 @@
 .settings-links a:last-child {
   border-bottom: 0;
 }
+
+.settings-danger {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.settings-danger h2 {
+  color: #b91c1c;
+}
+
+.settings-danger-btn {
+  background: #dc2626 !important;
+  color: #fff !important;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-danger-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

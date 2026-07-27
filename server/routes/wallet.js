@@ -187,7 +187,11 @@ router.get('/settings', requireAuth, (_req, res) => {
       bankAccount: db.settings.bankAccount,
       freeShippingMin: db.settings.freeShippingMin ?? 199,
       shippingFee: db.settings.shippingFee ?? 40,
-      paymentMethods: db.settings.paymentMethods || { cod: true, transfer: true, card: true },
+      paymentMethods: {
+        cod: db.settings.paymentMethods?.cod !== false,
+        transfer: db.settings.paymentMethods?.transfer !== false,
+        card: false,
+      },
       carriers: Array.isArray(db.settings.carriers) ? db.settings.carriers : [],
       defaultCarrier: db.settings.defaultCarrier || 'Kerry Express',
     },
@@ -227,10 +231,13 @@ router.put('/settings', requireRole('admin'), (req, res) => {
     const next = {
       cod: paymentMethods.cod !== false,
       transfer: paymentMethods.transfer !== false,
-      card: paymentMethods.card !== false,
+      card: false,
     }
-    if (!next.cod && !next.transfer && !next.card) {
-      return res.status(400).json({ ok: false, message: 'ต้องเปิดอย่างน้อย 1 วิธีชำระเงิน' })
+    if (!next.cod && !next.transfer) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ต้องเปิดอย่างน้อย 1 วิธี: เก็บเงินปลายทาง หรือ QR/โอน',
+      })
     }
     db.settings.paymentMethods = next
   }

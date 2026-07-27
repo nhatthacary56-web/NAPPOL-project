@@ -193,7 +193,7 @@ function emptyDb() {
       },
       freeShippingMin: 199,
       shippingFee: 40,
-      paymentMethods: { cod: true, transfer: true, card: true },
+      paymentMethods: { cod: true, transfer: true, card: false },
       carriers: ['Kerry Express', 'Flash Express', 'J&T Express', 'Thai Post', 'SPX'],
       defaultCarrier: 'Kerry Express',
     },
@@ -248,7 +248,7 @@ function defaultAppContent() {
     },
     legal: {
       privacy:
-        'เราเก็บข้อมูลที่จำเป็นต่อการสั่งซื้อและการให้บริการเท่านั้น และไม่ขายข้อมูลส่วนบุคคลแก่บุคคลภายนอกโดยไม่ได้รับความยินยอม',
+        'เราเก็บข้อมูลที่จำเป็นต่อการสั่งซื้อและการให้บริการเท่านั้น และไม่ขายข้อมูลส่วนบุคคลแก่บุคคลภายนอกโดยไม่ได้รับความยินยอม คุณลบบัญชีได้ที่ การตั้งค่า → ลบบัญชี (ข้อมูลส่วนตัวจะถูกลบ ออเดอร์เก่ายังเก็บแบบไม่ระบุตัวตน) แพลตฟอร์มรับชำระด้วยเก็บเงินปลายทางและสแกน QR/PromptPay เท่านั้น',
       terms:
         'การใช้แอปถือว่ายอมรับเงื่อนไขการให้บริการของแพลตฟอร์ม รวมถึงการสั่งซื้อ การชำระเงิน และการจัดส่งตามที่ระบุในแต่ละคำสั่งซื้อ',
       returnPolicy:
@@ -668,13 +668,14 @@ function migrate(data) {
   } else {
     if (data.settings.freeShippingMin == null) data.settings.freeShippingMin = 199
     if (data.settings.shippingFee == null) data.settings.shippingFee = 40
+    // แพลตฟอร์มรองรับเฉพาะ COD + QR/โอน — ไม่เปิดบัตรเครดิต (ต้นทุนเกตเวย์)
     if (!data.settings.paymentMethods) {
-      data.settings.paymentMethods = { cod: true, transfer: true, card: true }
+      data.settings.paymentMethods = { cod: true, transfer: true, card: false }
     } else {
       data.settings.paymentMethods = {
         cod: data.settings.paymentMethods.cod !== false,
         transfer: data.settings.paymentMethods.transfer !== false,
-        card: data.settings.paymentMethods.card !== false,
+        card: false,
       }
     }
     if (!Array.isArray(data.settings.carriers) || data.settings.carriers.length === 0) {
@@ -816,21 +817,23 @@ export function publicUser(user) {
 }
 
 export function findUserByEmail(email) {
-  return db.users.find((u) => u.email.toLowerCase() === email.toLowerCase())
+  return db.users.find(
+    (u) => !u.deletedAt && u.email.toLowerCase() === email.toLowerCase(),
+  )
 }
 
 export function findUserByPhone(phone) {
   const normalized = normalizePhone(phone)
   if (!normalized) return null
-  return db.users.find((u) => normalizePhone(u.phone) === normalized)
+  return db.users.find((u) => !u.deletedAt && normalizePhone(u.phone) === normalized)
 }
 
 export function findUserByGoogleId(googleId) {
-  return db.users.find((u) => u.googleId === googleId)
+  return db.users.find((u) => !u.deletedAt && u.googleId === googleId)
 }
 
 export function findUserByLineId(lineId) {
-  return db.users.find((u) => u.lineId === lineId)
+  return db.users.find((u) => !u.deletedAt && u.lineId === lineId)
 }
 
 export function normalizePhone(phone) {

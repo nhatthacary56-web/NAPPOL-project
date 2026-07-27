@@ -209,7 +209,7 @@ export function LoginPage() {
           ) : (
             <form className="auth-form" onSubmit={onVerifyOtp}>
               <p className="auth-page__hint" style={{ textAlign: 'left', margin: 0 }}>
-                ส่งรหัสไปที่ {phone}
+                ยังไม่ส่ง SMS จริง (ประหยัดต้นทุน) · รหัสยืนยันในแอปสำหรับเบอร์ {phone}
                 {providers?.demoOtp ? ' · ทดลองใช้ 123456' : ''}
               </p>
               <label>

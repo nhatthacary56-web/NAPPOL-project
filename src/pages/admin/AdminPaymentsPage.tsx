@@ -18,7 +18,11 @@ export function AdminPaymentsPage() {
         const s = w.settings
         setSettings({
           ...s,
-          paymentMethods: s.paymentMethods || { cod: true, transfer: true, card: true },
+          paymentMethods: {
+            cod: s.paymentMethods?.cod !== false,
+            transfer: s.paymentMethods?.transfer !== false,
+            card: false,
+          },
           carriers: s.carriers || [],
           defaultCarrier: s.defaultCarrier || 'Kerry Express',
           bankAccount: s.bankAccount || emptyBank,
@@ -31,6 +35,15 @@ export function AdminPaymentsPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     if (!settings) return
+    const pm = settings.paymentMethods || { cod: true, transfer: true, card: false }
+    if (pm.cod === false && pm.transfer === false) {
+      toast('ต้องเปิดอย่างน้อย 1 วิธี: ปลายทาง หรือ QR')
+      return
+    }
+    if (pm.transfer !== false && !String(settings.promptPayPhone || '').trim()) {
+      toast('เปิด QR แล้วต้องใส่เบอร์ PromptPay')
+      return
+    }
     const carriers = carriersText
       .split(/\n|,/)
       .map((c) => c.trim())
@@ -40,11 +53,22 @@ export function AdminPaymentsPage() {
       const res = await walletApi.updateSettings({
         promptPayPhone: settings.promptPayPhone,
         bankAccount: settings.bankAccount,
-        paymentMethods: settings.paymentMethods,
+        paymentMethods: {
+          cod: pm.cod !== false,
+          transfer: pm.transfer !== false,
+          card: false,
+        },
         carriers,
         defaultCarrier: settings.defaultCarrier,
       })
-      setSettings(res.settings)
+      setSettings({
+        ...res.settings,
+        paymentMethods: {
+          cod: res.settings.paymentMethods?.cod !== false,
+          transfer: res.settings.paymentMethods?.transfer !== false,
+          card: false,
+        },
+      })
       setCarriersText((res.settings.carriers || []).join('\n'))
       toast('บันทึกการชำระเงินและขนส่งแล้ว')
     } catch (error) {
@@ -63,7 +87,7 @@ export function AdminPaymentsPage() {
     )
   }
 
-  const pm = settings.paymentMethods || { cod: true, transfer: true, card: true }
+  const pm = settings.paymentMethods || { cod: true, transfer: true, card: false }
   const carriers = carriersText
     .split(/\n|,/)
     .map((c) => c.trim())
@@ -73,55 +97,112 @@ export function AdminPaymentsPage() {
     <div className="admin-page">
       <h1>การชำระเงินและขนส่ง</h1>
       <p className="admin-page__sub">
-        เปิด-ปิดวิธีชำระเงินที่ลูกค้าเห็นตอน Checkout · ตั้ง PromptPay/บัญชี · รายการขนส่งตอนใส่เลขพัสดุ
+        ลูกค้าชำระได้เฉพาะ <strong>เก็บเงินปลายทาง</strong> และ <strong>สแกน QR / PromptPay</strong>
+        — ไม่รองรับบัตรเครดิตและ SMS จ่ายเงิน (ประหยัดต้นทุน)
       </p>
 
       <form className="admin-card admin-form" onSubmit={onSubmit}>
-        <h2 style={{ marginTop: 0, fontSize: 16 }}>วิธีชำระเงิน</h2>
-        {(
-          [
-            ['cod', 'เก็บเงินปลายทาง (COD)'],
-            ['transfer', 'PromptPay / โอนธนาคาร'],
-            ['card', 'บัตรเครดิต/เดบิต (จำลอง)'],
-          ] as const
-        ).map(([key, label]) => (
-          <label key={key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-            <input
-              type="checkbox"
-              checked={pm[key] !== false}
-              onChange={(e) =>
-                setSettings((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        paymentMethods: {
-                          cod: prev.paymentMethods?.cod !== false,
-                          transfer: prev.paymentMethods?.transfer !== false,
-                          card: prev.paymentMethods?.card !== false,
-                          [key]: e.target.checked,
-                        },
-                      }
-                    : prev,
-                )
-              }
-            />
-            {label}
-          </label>
-        ))}
+        <h2 style={{ marginTop: 0, fontSize: 16 }}>เปิดวิธีชำระเงินให้ลูกค้า</h2>
 
-        <h2 style={{ fontSize: 16 }}>บัญชีรับเงิน (โอน)</h2>
+        <label
+          style={{
+            display: 'flex',
+            gap: 10,
+            alignItems: 'flex-start',
+            marginBottom: 12,
+            padding: '12px 14px',
+            border: '1px solid #e5e7eb',
+            borderRadius: 10,
+            background: pm.cod !== false ? '#f0fdf4' : '#fafafa',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={pm.cod !== false}
+            onChange={(e) =>
+              setSettings((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      paymentMethods: {
+                        cod: e.target.checked,
+                        transfer: prev.paymentMethods?.transfer !== false,
+                        card: false,
+                      },
+                    }
+                  : prev,
+              )
+            }
+            style={{ marginTop: 3 }}
+          />
+          <span>
+            <strong>เก็บเงินปลายทาง (COD)</strong>
+            <br />
+            <span style={{ fontSize: 12, color: '#6b7280' }}>
+              ลูกค้าจ่ายเงินสดตอนรับสินค้า — ไม่ต้องตั้งบัญชีรับโอน
+            </span>
+          </span>
+        </label>
+
+        <label
+          style={{
+            display: 'flex',
+            gap: 10,
+            alignItems: 'flex-start',
+            marginBottom: 12,
+            padding: '12px 14px',
+            border: '1px solid #e5e7eb',
+            borderRadius: 10,
+            background: pm.transfer !== false ? '#eff6ff' : '#fafafa',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={pm.transfer !== false}
+            onChange={(e) =>
+              setSettings((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      paymentMethods: {
+                        cod: prev.paymentMethods?.cod !== false,
+                        transfer: e.target.checked,
+                        card: false,
+                      },
+                    }
+                  : prev,
+              )
+            }
+            style={{ marginTop: 3 }}
+          />
+          <span>
+            <strong>สแกน QR / PromptPay</strong>
+            <br />
+            <span style={{ fontSize: 12, color: '#6b7280' }}>
+              ลูกค้าสแกน QR หรือโอนเข้าบัญชีแพลตฟอร์ม แล้วกดยืนยันในออเดอร์
+            </span>
+          </span>
+        </label>
+
+        <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 0 }}>
+          เคล็ดลับ: เปิดอย่างใดอย่างหนึ่งหรือทั้งสองก็ได้ — ถ้าปิดทั้งคู่ระบบจะไม่อนุญาตให้บันทึก
+        </p>
+
+        <h2 style={{ fontSize: 16 }}>บัญชีรับเงิน (เมื่อเปิด QR)</h2>
         <div className="admin-form-grid">
           <label>
-            PromptPay
+            เบอร์ PromptPay *
             <input
               value={settings.promptPayPhone || ''}
               onChange={(e) =>
                 setSettings((prev) => (prev ? { ...prev, promptPayPhone: e.target.value } : prev))
               }
+              placeholder="08xxxxxxxx"
+              disabled={pm.transfer === false}
             />
           </label>
           <label>
-            ธนาคาร
+            ธนาคาร (ทางเลือก)
             <input
               value={settings.bankAccount?.bank || ''}
               onChange={(e) =>
@@ -134,6 +215,7 @@ export function AdminPaymentsPage() {
                     : prev,
                 )
               }
+              disabled={pm.transfer === false}
             />
           </label>
           <label>
@@ -153,6 +235,7 @@ export function AdminPaymentsPage() {
                     : prev,
                 )
               }
+              disabled={pm.transfer === false}
             />
           </label>
           <label>
@@ -172,6 +255,7 @@ export function AdminPaymentsPage() {
                     : prev,
                 )
               }
+              disabled={pm.transfer === false}
             />
           </label>
         </div>
