@@ -23,6 +23,7 @@ export function AdminPaymentsPage() {
             transfer: s.paymentMethods?.transfer !== false,
             card: false,
           },
+          codMaxAmount: Number(s.codMaxAmount ?? 0),
           carriers: s.carriers || [],
           defaultCarrier: s.defaultCarrier || 'Kerry Express',
           bankAccount: s.bankAccount || emptyBank,
@@ -58,6 +59,7 @@ export function AdminPaymentsPage() {
           transfer: pm.transfer !== false,
           card: false,
         },
+        codMaxAmount: Number(settings.codMaxAmount ?? 0),
         carriers,
         defaultCarrier: settings.defaultCarrier,
       })
@@ -68,6 +70,7 @@ export function AdminPaymentsPage() {
           transfer: res.settings.paymentMethods?.transfer !== false,
           card: false,
         },
+        codMaxAmount: Number(res.settings.codMaxAmount ?? 0),
       })
       setCarriersText((res.settings.carriers || []).join('\n'))
       toast('บันทึกการชำระเงินและขนส่งแล้ว')
@@ -187,6 +190,24 @@ export function AdminPaymentsPage() {
         <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 0 }}>
           เคล็ดลับ: เปิดอย่างใดอย่างหนึ่งหรือทั้งสองก็ได้ — ถ้าปิดทั้งคู่ระบบจะไม่อนุญาตให้บันทึก
         </p>
+
+        <label>
+          เพดานเก็บเงินปลายทาง (บาท) · ใส่ 0 = ไม่จำกัด
+          <input
+            type="number"
+            min={0}
+            value={settings.codMaxAmount ?? 0}
+            onChange={(e) =>
+              setSettings((prev) =>
+                prev ? { ...prev, codMaxAmount: Math.max(0, Number(e.target.value) || 0) } : prev,
+              )
+            }
+            disabled={pm.cod === false}
+          />
+          <span style={{ fontSize: 12, color: '#6b7280' }}>
+            แนะนำเริ่มที่ 3000 — ออเดอร์เกินนี้ลูกค้าต้องสแกน QR
+          </span>
+        </label>
 
         <h2 style={{ fontSize: 16 }}>บัญชีรับเงิน (เมื่อเปิด QR)</h2>
         <div className="admin-form-grid">

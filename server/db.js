@@ -194,6 +194,7 @@ function emptyDb() {
       freeShippingMin: 199,
       shippingFee: 40,
       paymentMethods: { cod: true, transfer: true, card: false },
+      codMaxAmount: 3000,
       carriers: ['Kerry Express', 'Flash Express', 'J&T Express', 'Thai Post', 'SPX'],
       defaultCarrier: 'Kerry Express',
     },
@@ -271,37 +272,28 @@ function defaultAppContent() {
           id: 'c1',
           type: 'line',
           label: 'LINE Official',
-          value: '@greatapp',
-          link: 'https://line.me/R/ti/p/@greatapp',
-          active: true,
+          value: 'ตั้งค่าในแอดมิน',
+          link: '',
+          active: false,
           sort: 1,
         },
         {
           id: 'c2',
           type: 'phone',
           label: 'โทรศัพท์',
-          value: '02-000-0000',
-          link: 'tel:020000000',
-          active: true,
+          value: 'ตั้งค่าในแอดมิน',
+          link: '',
+          active: false,
           sort: 2,
         },
         {
           id: 'c3',
           type: 'email',
           label: 'อีเมล',
-          value: 'support@great.app',
-          link: 'mailto:support@great.app',
-          active: true,
+          value: 'ตั้งค่าในแอดมิน',
+          link: '',
+          active: false,
           sort: 3,
-        },
-        {
-          id: 'c4',
-          type: 'facebook',
-          label: 'Facebook',
-          value: 'Great App',
-          link: 'https://facebook.com',
-          active: true,
-          sort: 4,
         },
       ],
     },
@@ -338,14 +330,24 @@ function save() {
 function loadFromObject(raw) {
   db = migrate({ ...emptyDb(), ...raw })
   if (!db.meta?.seeded) {
-    seed()
+    if (process.env.SEED_DEMO === '0') {
+      db.meta = { ...(db.meta || {}), seeded: true, demoSkipped: true }
+      console.log('[db] SEED_DEMO=0 — skipped demo catalog seed')
+    } else {
+      seed()
+    }
   }
 }
 
 function loadLocalFile() {
   if (!fs.existsSync(dbPath)) {
     db = emptyDb()
-    seed()
+    if (process.env.SEED_DEMO === '0') {
+      db.meta = { seeded: true, demoSkipped: true }
+      console.log('[db] SEED_DEMO=0 — empty local DB without demo seed')
+    } else {
+      seed()
+    }
     saveLocal()
     return
   }
@@ -668,6 +670,7 @@ function migrate(data) {
   } else {
     if (data.settings.freeShippingMin == null) data.settings.freeShippingMin = 199
     if (data.settings.shippingFee == null) data.settings.shippingFee = 40
+    if (data.settings.codMaxAmount == null) data.settings.codMaxAmount = 3000
     // แพลตฟอร์มรองรับเฉพาะ COD + QR/โอน — ไม่เปิดบัตรเครดิต (ต้นทุนเกตเวย์)
     if (!data.settings.paymentMethods) {
       data.settings.paymentMethods = { cod: true, transfer: true, card: false }

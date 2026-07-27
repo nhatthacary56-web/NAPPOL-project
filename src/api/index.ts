@@ -254,8 +254,13 @@ export const orderApi = {
       method: 'PATCH',
       json: { status, ...extra },
     }),
-  pay: (id: string, body?: { method?: string; slipNote?: string }) =>
-    api<{ ok: true; order: ApiOrder }>(`/orders/${id}/pay`, {
+  pay: (id: string, body?: { method?: string; slipNote?: string; slipImageUrl?: string }) =>
+    api<{ ok: true; order: ApiOrder; message?: string }>(`/orders/${id}/pay`, {
+      method: 'POST',
+      json: body ?? {},
+    }),
+  confirmPayment: (id: string, body?: { note?: string }) =>
+    api<{ ok: true; order: ApiOrder; message?: string }>(`/orders/${id}/confirm-payment`, {
       method: 'POST',
       json: body ?? {},
     }),

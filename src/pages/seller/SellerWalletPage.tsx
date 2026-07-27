@@ -68,7 +68,8 @@ export function SellerWalletPage() {
     <div className="seller-page">
       <h1>กระเป๋าเงินร้าน</h1>
       <p className="seller-page__sub">
-        ค่าธรรมเนียมแพลตฟอร์ม {(rate * 100).toFixed(0)}% · เงินเข้าหลังลูกค้ายืนยันรับของ
+        ค่าธรรมเนียมแพลตฟอร์ม {(rate * 100).toFixed(0)}% · เงินเข้าหลังลูกค้ายืนยันรับของ ·
+        ถอนเข้าบัญชีธนาคารตาม KYC หลังแอดมินอนุมัติ
       </p>
 
       <div className="seller-card seller-wallet-grid">

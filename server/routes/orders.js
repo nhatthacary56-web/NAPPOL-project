@@ -374,6 +374,15 @@ router.post('/checkout', requireAuth, (req, res) => {
   })
 
   const cartTotal = previewTotals.reduce((s, row) => s + row.total, 0)
+  if (paymentMethod === 'cod') {
+    const codMax = Number(db.settings?.codMaxAmount ?? 0)
+    if (codMax > 0 && cartTotal > codMax) {
+      return res.status(400).json({
+        ok: false,
+        message: `เก็บเงินปลายทางใช้ได้ไม่เกิน ฿${codMax.toLocaleString('th-TH')} — เลือกสแกน QR แทน`,
+      })
+    }
+  }
   if (paymentMethod === 'wallet') {
     try {
       debitBuyerWallet(req.user.id, cartTotal, {
@@ -483,24 +492,103 @@ router.post('/:id/pay', requireAuth, (req, res) => {
   if (order.status !== 'unpaid') {
     return res.status(400).json({ ok: false, message: 'ออเดอร์นี้ไม่ต้องชำระแล้ว' })
   }
+  if (order.paymentMethod !== 'transfer') {
+    return res.status(400).json({ ok: false, message: 'ออเดอร์นี้ไม่ใช่การโอน/QR' })
+  }
 
   const method = req.body?.method || order.paymentMethod
   const slipNote = String(req.body?.slipNote || '').trim()
+  const slipImageUrl = String(req.body?.slipImageUrl || '').trim()
+  if (!slipImageUrl) {
+    return res.status(400).json({
+      ok: false,
+      message: 'กรุณาอัปโหลดสลิปโอนเงินก่อนยืนยัน',
+    })
+  }
 
+  // รอแอดมินตรวจสลิป — ยังไม่ตัดสถานะเป็นชำระแล้ว
+  order.payment = {
+    ...(order.payment || {}),
+    status: 'awaiting_confirm',
+    paidAt: null,
+    method,
+    slipImageUrl,
+    note: slipNote || 'ลูกค้าส่งสลิปแล้ว รอตรวจสอบ',
+    history: [
+      ...((order.payment && order.payment.history) || []),
+      {
+        at: new Date().toISOString(),
+        event: 'slip_submitted',
+        method,
+        note: slipNote || 'อัปโหลดสลิป',
+      },
+    ],
+  }
+
+  pushNotification(order.userId, {
+    type: 'order',
+    title: 'ส่งสลิปแล้ว',
+    body: `ออเดอร์ ${order.id} รอแอดมินตรวจสอบการโอน`,
+    link: `/orders/${order.id}`,
+  })
+
+  const shopIds = [...new Set(order.items.map((i) => i.shopId))]
+  for (const shopId of shopIds) {
+    const shop = getShopById(shopId)
+    if (shop) {
+      pushNotification(shop.ownerId, {
+        type: 'order',
+        title: 'ลูกค้าส่งสลิปแล้ว',
+        body: `ออเดอร์ ${order.id} รอแอดมินยืนยันชำระ`,
+        link: '/seller/orders',
+      })
+    }
+  }
+
+  // แจ้งแอดมินทุกคน
+  for (const admin of (db.users || []).filter((u) => u.role === 'admin' && !u.deletedAt)) {
+    pushNotification(admin.id, {
+      type: 'order',
+      title: 'รอตรวจสลิปโอน',
+      body: `ออเดอร์ ${order.id} · ฿${Number(order.total).toLocaleString('th-TH')}`,
+      link: '/admin/orders',
+    })
+  }
+
+  persist()
+  res.json({ ok: true, order, message: 'ส่งสลิปแล้ว รอแอดมินยืนยัน' })
+})
+
+/** แอดมินยืนยันว่าได้รับเงินโอนแล้ว → to_ship + credit ร้าน */
+router.post('/:id/confirm-payment', requireAuth, (req, res) => {
+  const db = getDb()
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ ok: false, message: 'เฉพาะแอดมิน' })
+  }
+  const order = db.orders.find((o) => o.id === req.params.id)
+  if (!order) return res.status(404).json({ ok: false, message: 'ไม่พบคำสั่งซื้อ' })
+  if (order.status !== 'unpaid') {
+    return res.status(400).json({ ok: false, message: 'ออเดอร์นี้ไม่ได้อยู่สถานะรอชำระ' })
+  }
+  if (order.paymentMethod !== 'transfer') {
+    return res.status(400).json({ ok: false, message: 'ยืนยันได้เฉพาะออเดอร์โอน/QR' })
+  }
+
+  const note = String(req.body?.note || '').trim() || 'แอดมินยืนยันการโอนแล้ว'
   order.status = 'to_ship'
   order.payment = {
     ...(order.payment || {}),
     status: 'paid',
     paidAt: new Date().toISOString(),
-    method,
-    note: slipNote || 'ยืนยันโอนผ่าน QR/PromptPay แล้ว',
+    method: order.paymentMethod,
+    note,
     history: [
       ...((order.payment && order.payment.history) || []),
       {
         at: new Date().toISOString(),
         event: 'paid',
-        method,
-        note: slipNote || 'ชำระเงินสำเร็จ',
+        method: order.paymentMethod,
+        note,
       },
     ],
   }
@@ -528,7 +616,7 @@ router.post('/:id/pay', requireAuth, (req, res) => {
   }
 
   persist()
-  res.json({ ok: true, order })
+  res.json({ ok: true, order, message: 'ยืนยันชำระเงินแล้ว' })
 })
 
 router.patch('/:id/status', requireAuth, (req, res) => {
@@ -572,11 +660,35 @@ router.patch('/:id/status', requireAuth, (req, res) => {
     if (
       !(status === 'to_review' && order.status === 'shipping') &&
       !(status === 'completed' && order.status === 'to_review') &&
-      !(status === 'cancelled' && ['unpaid', 'to_ship'].includes(order.status)) &&
-      !(status === 'to_ship' && order.status === 'unpaid')
+      !(status === 'cancelled' && ['unpaid', 'to_ship'].includes(order.status))
     ) {
       return res.status(403).json({ ok: false, message: 'ลูกค้าเปลี่ยนสถานะนี้ไม่ได้' })
     }
+  }
+
+  // แอดมินเลื่อน unpaid → to_ship = ยืนยันรับเงิน (กรณีโอน/QR)
+  if (
+    isAdmin &&
+    status === 'to_ship' &&
+    order.status === 'unpaid' &&
+    order.paymentMethod === 'transfer'
+  ) {
+    order.payment = {
+      ...(order.payment || {}),
+      status: 'paid',
+      paidAt: new Date().toISOString(),
+      note: order.payment?.note || 'แอดมินยืนยันการโอนแล้ว',
+      history: [
+        ...((order.payment && order.payment.history) || []),
+        {
+          at: new Date().toISOString(),
+          event: 'paid',
+          method: order.paymentMethod,
+          note: 'แอดมินยืนยันการโอนแล้ว',
+        },
+      ],
+    }
+    creditPending(order)
   }
 
   if (status === 'shipping' && (isSeller || isAdmin)) {

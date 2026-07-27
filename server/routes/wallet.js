@@ -192,6 +192,7 @@ router.get('/settings', requireAuth, (_req, res) => {
         transfer: db.settings.paymentMethods?.transfer !== false,
         card: false,
       },
+      codMaxAmount: Number(db.settings.codMaxAmount ?? 0),
       carriers: Array.isArray(db.settings.carriers) ? db.settings.carriers : [],
       defaultCarrier: db.settings.defaultCarrier || 'Kerry Express',
     },
@@ -217,6 +218,9 @@ router.put('/settings', requireRole('admin'), (req, res) => {
   }
   if (req.body?.shippingFee !== undefined) {
     db.settings.shippingFee = Math.max(0, Number(req.body.shippingFee) || 0)
+  }
+  if (req.body?.codMaxAmount !== undefined) {
+    db.settings.codMaxAmount = Math.max(0, Number(req.body.codMaxAmount) || 0)
   }
   if (bankAccount) {
     db.settings.bankAccount = {

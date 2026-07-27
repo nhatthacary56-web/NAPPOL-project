@@ -17,7 +17,7 @@ const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
 const FALLBACK_CARRIERS = ['Kerry Express', 'Flash Express', 'J&T Express', 'Thai Post', 'SPX']
 
 export function AdminOrdersPage() {
-  const { orders, updateOrderStatus, refreshOrders } = useStore()
+  const { orders, updateOrderStatus, refreshOrders, confirmOrderPayment } = useStore()
   const { toast } = useToast()
   const [shipOrderId, setShipOrderId] = useState<string | null>(null)
   const [trackingNumber, setTrackingNumber] = useState('')
@@ -26,6 +26,7 @@ export function AdminOrdersPage() {
   const [carrier, setCarrier] = useState('Kerry Express')
   const [zortReady, setZortReady] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [slipPreview, setSlipPreview] = useState<string | null>(null)
 
   useEffect(() => {
     void orderApi
@@ -92,7 +93,7 @@ export function AdminOrdersPage() {
     <div className="admin-page">
       <h1>คำสั่งซื้อ</h1>
       <p className="admin-page__sub">
-        เรียกขนส่งผ่าน ZORT ได้เลขพัสดุ แล้วพิมพ์ใบปะหน้าบน Great App (ไม่ต้องล็อกอินเว็บขนส่ง)
+        ออเดอร์โอน/QR ที่ส่งสลิปแล้ว กด “ยืนยันรับเงิน” ก่อนร้านจัดส่ง · ZORT สำหรับเลขพัสดุ
         {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
       </p>
       <div className="admin-card">
@@ -130,6 +131,25 @@ export function AdminOrdersPage() {
                     <td>{formatPrice(order.total)}</td>
                     <td>
                       {statusLabel(order.status)}
+                      {order.paymentMethod === 'transfer' && order.payment?.status ? (
+                        <div style={{ color: '#6b7280', fontSize: 12 }}>
+                          ชำระ: {order.payment.status}
+                          {order.payment.slipImageUrl ? (
+                            <>
+                              {' '}
+                              ·{' '}
+                              <button
+                                type="button"
+                                className="admin-btn ghost"
+                                style={{ padding: '0 4px', fontSize: 12 }}
+                                onClick={() => setSlipPreview(order.payment?.slipImageUrl || null)}
+                              >
+                                ดูสลิป
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {order.trackingNumber ? (
                         <div style={{ color: '#6b7280', fontSize: 12 }}>
                           {order.carrier} · {order.trackingNumber}
@@ -157,9 +177,44 @@ export function AdminOrdersPage() {
                             {busyId === order.id ? 'ZORT...' : 'เรียก ZORT'}
                           </button>
                         ) : null}
-                        {advanceTo ? (
+                        {advanceTo &&
+                        !(order.status === 'unpaid' && order.paymentMethod === 'transfer') ? (
                           <button type="button" onClick={() => void advance(order.id, advanceTo)}>
                             {advanceTo === 'shipping' ? 'ใส่เลขเอง' : 'ไปขั้นถัดไป'}
+                          </button>
+                        ) : null}
+                        {order.status === 'unpaid' && order.paymentMethod === 'transfer' ? (
+                          <button
+                            type="button"
+                            disabled={busyId === order.id}
+                            onClick={() => {
+                              void (async () => {
+                                setBusyId(order.id)
+                                try {
+                                  if (
+                                    order.payment?.status === 'awaiting_confirm' ||
+                                    order.payment?.slipImageUrl
+                                  ) {
+                                    const res = await confirmOrderPayment(order.id)
+                                    toast(res.message)
+                                  } else {
+                                    await updateOrderStatus(order.id, 'to_ship')
+                                    toast('ยืนยันรับเงินแล้ว (ไม่มีสลิป)')
+                                  }
+                                } catch (error) {
+                                  toast(error instanceof Error ? error.message : 'ไม่สำเร็จ')
+                                } finally {
+                                  setBusyId(null)
+                                }
+                              })()
+                            }}
+                          >
+                            {busyId === order.id
+                              ? '...'
+                              : order.payment?.status === 'awaiting_confirm' ||
+                                  order.payment?.slipImageUrl
+                                ? 'ยืนยันรับเงิน'
+                                : 'ยืนยันรับเงิน (ไม่มีสลิป)'}
                           </button>
                         ) : null}
                         {order.status !== 'cancelled' && order.status !== 'completed' ? (
@@ -233,6 +288,27 @@ export function AdminOrdersPage() {
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+      {slipPreview ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.55)',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 50,
+            padding: 16,
+          }}
+          onClick={() => setSlipPreview(null)}
+        >
+          <img
+            src={slipPreview}
+            alt="สลิป"
+            style={{ maxWidth: 'min(480px, 100%)', maxHeight: '85vh', borderRadius: 12 }}
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       ) : null}
     </div>

@@ -23,6 +23,18 @@ const authLoginLimiter = createRateLimiter({
   message: 'พยายามเข้าสู่ระบบบ่อยเกินไป',
 })
 
+const otpRequestLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'ขอรหัส OTP บ่อยเกินไป',
+})
+
+const otpVerifyLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'ยืนยัน OTP บ่อยเกินไป',
+})
+
 const GENERIC_LOGIN_FAIL = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
 
 function authProviders() {
@@ -305,7 +317,7 @@ router.post('/admin-login', authLoginLimiter, (req, res) => {
   res.json({ ...issueSession(user), message: 'เข้าสู่ระบบแอดมินสำเร็จ' })
 })
 
-router.post('/otp/request', (req, res) => {
+router.post('/otp/request', otpRequestLimiter, (req, res) => {
   const phone = normalizePhone(req.body?.phone)
   if (!phone || phone.length < 9) {
     return res.status(400).json({ ok: false, message: 'กรอกเบอร์โทรให้ถูกต้อง' })
@@ -331,7 +343,7 @@ router.post('/otp/request', (req, res) => {
   })
 })
 
-router.post('/otp/verify', (req, res) => {
+router.post('/otp/verify', otpVerifyLimiter, (req, res) => {
   const phone = normalizePhone(req.body?.phone)
   const code = String(req.body?.code || '').trim()
   if (!phone || !code) {

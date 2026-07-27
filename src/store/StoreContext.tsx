@@ -121,8 +121,9 @@ type StoreContextValue = {
   ) => Promise<void>
   payOrder: (
     orderId: string,
-    extra?: { method?: string; slipNote?: string },
+    extra?: { method?: string; slipNote?: string; slipImageUrl?: string },
   ) => Promise<{ ok: boolean; message: string }>
+  confirmOrderPayment: (orderId: string) => Promise<{ ok: boolean; message: string }>
   chatUnread: number
   refreshChatUnread: () => Promise<void>
 
@@ -824,16 +825,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
 
   const payOrder = useCallback(
-    async (orderId: string, extra?: { method?: string; slipNote?: string }) => {
+    async (
+      orderId: string,
+      extra?: { method?: string; slipNote?: string; slipImageUrl?: string },
+    ) => {
       try {
-        await orderApi.pay(orderId, extra)
+        const res = await orderApi.pay(orderId, extra)
         await refreshOrders()
         await refreshNotifications()
-        return { ok: true, message: 'ชำระเงินสำเร็จ (จำลอง)' }
+        return { ok: true, message: res.message || 'ส่งสลิปแล้ว รอแอดมินยืนยัน' }
       } catch (error) {
         return {
           ok: false,
           message: error instanceof Error ? error.message : 'ชำระเงินไม่สำเร็จ',
+        }
+      }
+    },
+    [refreshOrders, refreshNotifications],
+  )
+
+  const confirmOrderPayment = useCallback(
+    async (orderId: string) => {
+      try {
+        const res = await orderApi.confirmPayment(orderId)
+        await refreshOrders()
+        await refreshNotifications()
+        return { ok: true, message: res.message || 'ยืนยันชำระเงินแล้ว' }
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : 'ยืนยันไม่สำเร็จ',
         }
       }
     },
@@ -963,6 +984,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       placeOrder,
       updateOrderStatus,
       payOrder,
+      confirmOrderPayment,
       chatUnread,
       refreshChatUnread,
       brand,
@@ -1030,6 +1052,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       placeOrder,
       updateOrderStatus,
       payOrder,
+      confirmOrderPayment,
       chatUnread,
       refreshChatUnread,
       brand,

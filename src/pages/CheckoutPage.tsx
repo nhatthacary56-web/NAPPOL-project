@@ -28,6 +28,7 @@ export function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<ApiOrder['paymentMethod']>('cod')
   const [voucherCode, setVoucherCode] = useState('')
   const [walletBalance, setWalletBalance] = useState(0)
+  const [codMaxAmount, setCodMaxAmount] = useState(0)
 
   useEffect(() => {
     if (!addressId && defaultAddress) setAddressId(defaultAddress.id)
@@ -53,6 +54,10 @@ export function CheckoutPage() {
       .buyerMine()
       .then((res) => setWalletBalance(res.wallet.balance || 0))
       .catch(() => setWalletBalance(0))
+    void walletApi
+      .settings()
+      .then((res) => setCodMaxAmount(Number(res.settings.codMaxAmount ?? 0)))
+      .catch(() => setCodMaxAmount(0))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount
   }, [])
 
@@ -108,11 +113,23 @@ export function CheckoutPage() {
         )
       : 0
   const total = Math.max(0, subtotal + shippingFee - discount)
+  const codBlocked = codMaxAmount > 0 && total > codMaxAmount
+
+  useEffect(() => {
+    if (paymentMethod === 'cod' && codBlocked) {
+      const alt = paymentMethods.find((m) => m.id !== 'cod')
+      if (alt) setPaymentMethod(alt.id)
+    }
+  }, [codBlocked, paymentMethod, paymentMethods])
 
   async function submit() {
     if (!addresses.length || !addressId) {
       toast('กรุณาเพิ่มและเลือกที่อยู่จัดส่งก่อน')
       navigate('/addresses')
+      return
+    }
+    if (paymentMethod === 'cod' && codBlocked) {
+      toast(`เก็บเงินปลายทางใช้ได้ไม่เกิน ${formatPrice(codMaxAmount)} — เลือกสแกน QR`)
       return
     }
     if (voucherCode && voucher && !meetsMin) {
@@ -250,24 +267,39 @@ export function CheckoutPage() {
           {paymentMethods.length === 0 && walletBalance <= 0 ? (
             <p className="checkout-card__hint">ยังไม่มีวิธีชำระเงินที่เปิดใช้งาน</p>
           ) : (
-            paymentMethods.map((method) => (
-              <label key={method.id} className="checkout-pay">
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={paymentMethod === method.id}
-                  onChange={() => setPaymentMethod(method.id)}
-                />
-                <span>
-                  {method.name}
-                  {method.description ? (
-                    <em style={{ display: 'block', fontSize: 12, color: '#6b7280', fontStyle: 'normal' }}>
-                      {method.description}
+            paymentMethods.map((method) => {
+              const blocked = method.id === 'cod' && codBlocked
+              return (
+                <label
+                  key={method.id}
+                  className="checkout-pay"
+                  style={blocked ? { opacity: 0.55 } : undefined}
+                >
+                  <input
+                    type="radio"
+                    name="payment"
+                    checked={paymentMethod === method.id}
+                    disabled={blocked}
+                    onChange={() => setPaymentMethod(method.id)}
+                  />
+                  <span>
+                    {method.name}
+                    <em
+                      style={{
+                        display: 'block',
+                        fontSize: 12,
+                        color: '#6b7280',
+                        fontStyle: 'normal',
+                      }}
+                    >
+                      {blocked
+                        ? `ใช้ได้ไม่เกิน ${formatPrice(codMaxAmount)} — ยอดนี้เกินเพดาน`
+                        : method.description || ''}
                     </em>
-                  ) : null}
-                </span>
-              </label>
-            ))
+                  </span>
+                </label>
+              )
+            })
           )}
         </section>
 

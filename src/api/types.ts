@@ -155,10 +155,11 @@ export type ApiOrder = {
     { gross: number; fee: number; net: number; status: string }
   >
   payment?: {
-    status: 'pending' | 'paid' | 'cod' | 'refunded'
+    status: 'pending' | 'awaiting_confirm' | 'paid' | 'cod' | 'refunded'
     paidAt?: string | null
     method?: string
     note?: string
+    slipImageUrl?: string | null
     bankAccount?: {
       bank: string
       accountName: string
@@ -246,6 +247,8 @@ export type PlatformSettings = {
   freeShippingMin?: number
   shippingFee?: number
   paymentMethods?: { cod: boolean; transfer: boolean; card?: boolean }
+  /** 0 = ไม่จำกัด · ยอดรวมตะกร้าสูงกว่านี้ใช้ COD ไม่ได้ */
+  codMaxAmount?: number
   carriers?: string[]
   defaultCarrier?: string
 }

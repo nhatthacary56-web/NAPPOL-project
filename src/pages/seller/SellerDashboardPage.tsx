@@ -378,6 +378,15 @@ export function SellerDashboardPage() {
         <p className="seller-page__sub">รอแอดมินตรวจบัตรประชาชนและบัญชีธนาคารก่อนลงขายได้</p>
       ) : null}
 
+      {localShop.status !== 'active' ? (
+        <div className="seller-announce seller-announce--danger" role="status">
+          <span aria-hidden>🔒</span>
+          <p>
+            ร้านยังไม่เปิดขาย — ส่ง KYC ให้ครบแล้วรอแอดมินอนุมัติ จึงจะเพิ่มสินค้าและรับออเดอร์ได้
+          </p>
+        </div>
+      ) : null}
+
       <div className="seller-kpi">
         <Link className="seller-kpi__item" to="/seller/orders?status=to_ship">
           <strong className={kpis.toShip > 0 ? 'is-urgent' : undefined}>{kpis.toShip}</strong>
@@ -415,12 +424,21 @@ export function SellerDashboardPage() {
       <section className="seller-card">
         <h2 className="seller-section-title">ทางลัด</h2>
         <div className="seller-quick">
-          <Link to="/seller/products" className="seller-quick__item">
-            <span className="seller-quick__icon" style={{ background: '#dbeafe' }}>
-              📦
-            </span>
-            สินค้าของฉัน
-          </Link>
+          {localShop.status === 'active' ? (
+            <Link to="/seller/products" className="seller-quick__item">
+              <span className="seller-quick__icon" style={{ background: '#dbeafe' }}>
+                📦
+              </span>
+              สินค้าของฉัน
+            </Link>
+          ) : (
+            <Link to="/seller/shop" className="seller-quick__item">
+              <span className="seller-quick__icon" style={{ background: '#fee2e2' }}>
+                🪪
+              </span>
+              ส่งเอกสาร KYC
+            </Link>
+          )}
           <Link to="/seller/orders" className="seller-quick__item">
             <span className="seller-quick__icon" style={{ background: '#fce7f3' }}>
               📋

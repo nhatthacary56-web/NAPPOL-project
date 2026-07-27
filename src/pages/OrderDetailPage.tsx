@@ -7,6 +7,7 @@ import { chatApi, returnApi, reviewApi } from '../api'
 import { statusLabel, useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
 import type { OrderStatus } from '../api/types'
+import { trackingUrl } from '../utils/trackingUrl'
 import './OrderDetailPage.css'
 
 const FALLBACK_REASONS = [
@@ -35,6 +36,7 @@ export function OrderDetailPage() {
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
   const [slipNote, setSlipNote] = useState('')
+  const [slipImageUrl, setSlipImageUrl] = useState('')
   const [reviewedIds, setReviewedIds] = useState<string[]>([])
   const [returnOpen, setReturnOpen] = useState(false)
   const [reasons, setReasons] = useState<string[]>(FALLBACK_REASONS)
@@ -140,9 +142,14 @@ export function OrderDetailPage() {
   }
 
   async function onPay() {
+    if (!slipImageUrl) {
+      toast('กรุณาอัปโหลดรูปสลิปก่อน')
+      return
+    }
     const result = await payOrder(order!.id, {
       method: order!.paymentMethod,
       slipNote: slipNote || undefined,
+      slipImageUrl,
     })
     toast(result.message)
   }
@@ -199,6 +206,19 @@ export function OrderDetailPage() {
             <h2>ติดตามพัสดุ</h2>
             <p>
               {order.carrier || 'ขนส่ง'} · <strong>{order.trackingNumber}</strong>
+              {trackingUrl(order.carrier, order.trackingNumber) ? (
+                <>
+                  {' '}
+                  ·{' '}
+                  <a
+                    href={trackingUrl(order.carrier, order.trackingNumber)!}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    ติดตามพัสดุ
+                  </a>
+                </>
+              ) : null}
             </p>
             <p>
               <Link to={`/orders/${order.id}/label`}>พิมพ์ใบปะหน้าบน Great App</Link>
@@ -215,47 +235,69 @@ export function OrderDetailPage() {
         (order.paymentMethod === 'transfer' || order.payment?.promptPay) ? (
           <section className="order-detail__card order-detail__pay">
             <h2>สแกน QR / PromptPay</h2>
-            {order.payment?.promptPay ? (
+            {order.payment?.status === 'awaiting_confirm' ? (
               <>
-                <p>โอน PromptPay ไปหมายเลข {order.payment.promptPay.phone}</p>
-                <p>
-                  ยอด {formatPrice(order.payment.promptPay.amount)} · อ้างอิง{' '}
-                  {order.payment.promptPay.ref}
-                </p>
-                <div className="order-detail__qr">
-                  <img
-                    src={`https://promptpay.io/${encodeURIComponent(
-                      String(order.payment.promptPay.phone).replace(/\D/g, ''),
-                    )}/${Number(order.payment.promptPay.amount).toFixed(2)}.png`}
-                    alt="QR PromptPay"
-                    width={220}
-                    height={220}
-                    style={{ display: 'block', margin: '8px auto', borderRadius: 8 }}
-                  />
-                  <p className="muted" style={{ textAlign: 'center', fontSize: 12 }}>
-                    สแกนด้วยแอปธนาคาร · ตรวจยอดก่อนยืนยัน
-                  </p>
-                </div>
+                <p style={{ color: '#b45309', fontWeight: 600 }}>ส่งสลิปแล้ว — รอแอดมินตรวจสอบ</p>
+                {order.payment.slipImageUrl ? (
+                  <a href={order.payment.slipImageUrl} target="_blank" rel="noreferrer">
+                    <img
+                      src={order.payment.slipImageUrl}
+                      alt="สลิป"
+                      style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8 }}
+                    />
+                  </a>
+                ) : null}
+                {order.payment.note ? <p className="muted">{order.payment.note}</p> : null}
               </>
-            ) : null}
-            {order.payment?.bankAccount ? (
-              <p className="muted">
-                หรือโอน {order.payment.bankAccount.bank}{' '}
-                {order.payment.bankAccount.accountNumber} ชื่อ{' '}
-                {order.payment.bankAccount.accountName}
-              </p>
-            ) : null}
-            <label className="order-detail__slip">
-              หมายเหตุสลิป (ถ้ามี)
-              <input
-                value={slipNote}
-                onChange={(e) => setSlipNote(e.target.value)}
-                placeholder="เช่น โอนเมื่อ 20:15"
-              />
-            </label>
-            <button type="button" onClick={() => void onPay()}>
-              ยืนยันว่าโอนแล้ว
-            </button>
+            ) : (
+              <>
+                {order.payment?.promptPay ? (
+                  <>
+                    <p>โอน PromptPay ไปหมายเลข {order.payment.promptPay.phone}</p>
+                    <p>
+                      ยอด {formatPrice(order.payment.promptPay.amount)} · อ้างอิง{' '}
+                      {order.payment.promptPay.ref}
+                    </p>
+                    <div className="order-detail__qr">
+                      <img
+                        src={`https://promptpay.io/${encodeURIComponent(
+                          String(order.payment.promptPay.phone).replace(/\D/g, ''),
+                        )}/${Number(order.payment.promptPay.amount).toFixed(2)}.png`}
+                        alt="QR PromptPay"
+                        width={220}
+                        height={220}
+                        style={{ display: 'block', margin: '8px auto', borderRadius: 8 }}
+                      />
+                      <p className="muted" style={{ textAlign: 'center', fontSize: 12 }}>
+                        สแกนด้วยแอปธนาคาร · ตรวจยอดก่อนยืนยัน
+                      </p>
+                    </div>
+                  </>
+                ) : null}
+                {order.payment?.bankAccount ? (
+                  <p className="muted">
+                    หรือโอน {order.payment.bankAccount.bank}{' '}
+                    {order.payment.bankAccount.accountNumber} ชื่อ{' '}
+                    {order.payment.bankAccount.accountName}
+                  </p>
+                ) : null}
+                <label className="order-detail__slip">
+                  รูปสลิปโอนเงิน *
+                  <ImageUpload value={slipImageUrl} onChange={setSlipImageUrl} />
+                </label>
+                <label className="order-detail__slip">
+                  หมายเหตุสลิป (ถ้ามี)
+                  <input
+                    value={slipNote}
+                    onChange={(e) => setSlipNote(e.target.value)}
+                    placeholder="เช่น โอนเมื่อ 20:15"
+                  />
+                </label>
+                <button type="button" onClick={() => void onPay()} disabled={!slipImageUrl}>
+                  ส่งสลิปให้แอดมินตรวจ
+                </button>
+              </>
+            )}
           </section>
         ) : null}
 
