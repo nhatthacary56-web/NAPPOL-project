@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
@@ -93,12 +94,35 @@ app.use('/api', metaRoutes)
 
 if (isProd) {
   app.use(express.static(distDir, { index: false, maxAge: '1h' }))
+
+  // Direct APK download (avoid SPA fallback returning HTML)
+  app.get('/downloads/:file', (req, res) => {
+    const file = path.basename(String(req.params.file || ''))
+    if (!file || file.includes('..')) {
+      res.status(400).send('Bad request')
+      return
+    }
+    const candidates = [
+      path.join(distDir, 'downloads', file),
+      path.join(__dirname, '../public/downloads', file),
+    ]
+    for (const filePath of candidates) {
+      if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', 'application/vnd.android.package-archive')
+        res.setHeader('Content-Disposition', `attachment; filename="${file}"`)
+        res.sendFile(filePath)
+        return
+      }
+    }
+    res.status(404).send('File not found')
+  })
+
   app.use((req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.status(405).json({ ok: false, message: 'Method not allowed' })
       return
     }
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/downloads')) {
       res.status(404).json({ ok: false, message: 'Not found' })
       return
     }
