@@ -12,7 +12,9 @@
     "serve": "npm run build && npm start",
     "mobile:build": "npm run build && npx cap sync android",
     "mobile:open": "npx cap open android",
-    "mobile:sync": "npx cap sync android"
+    "mobile:sync": "npx cap sync android",
+    "mobile:aab": "npm run mobile:build && cd android && gradlew.bat bundleRelease",
+    "mobile:screenshots": "node scripts/capture-play-screenshots.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -47,6 +49,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.2",
+    "playwright": "^1.62.0",
     "typescript": "~5.8.3",
     "vite": "^6.3.5"
   },

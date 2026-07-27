@@ -20,7 +20,10 @@ android/captures
 android/local.properties
 android/*.iml
 android/.idea
+android/keystore/
+android/keystore.properties
 *.keystore
 *.jks
 *.apk
 *.aab
+store/play/releases/
