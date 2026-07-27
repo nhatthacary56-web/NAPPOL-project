@@ -26,4 +26,5 @@ android/keystore.properties
 *.jks
 *.apk
 *.aab
+!public/downloads/*.apk
 store/play/releases/
