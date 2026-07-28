@@ -19,6 +19,8 @@
   --shadow-header: 0 1px 1px rgba(0, 0, 0, 0.05);
   --nav-height: 56px;
   --header-height: 52px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   --radius-sm: 8px;
   --radius-md: 12px;
   --font: 'Noto Sans Thai', 'Segoe UI', sans-serif;

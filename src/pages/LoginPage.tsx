@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { authApi } from '../api'
 import { PageHeader } from '../components/layout/PageHeader'
 import { useCatalog } from '../store/CatalogContext'
@@ -50,10 +51,11 @@ export function LoginPage() {
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [showEmail, setShowEmail] = useState(false)
+  const [showEmail, setShowEmail] = useState(() => Capacitor.isNativePlatform())
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const googleBtnRef = useRef<HTMLDivElement>(null)
+  const isNativeApp = Capacitor.isNativePlatform()
 
   useEffect(() => {
     void authApi
@@ -246,8 +248,28 @@ export function LoginPage() {
         </div>
 
         <section className="auth-social">
-          {providers?.googleClientId ? (
+          {providers?.googleClientId && !isNativeApp ? (
             <div ref={googleBtnRef} className="auth-google-btn" />
+          ) : providers?.googleClientId && isNativeApp ? (
+            <div className="auth-card" style={{ padding: 12, marginBottom: 8 }}>
+              <p className="auth-page__hint" style={{ margin: 0, textAlign: 'left' }}>
+                บนแอป Android การเข้าด้วยปุ่ม Google ใน WebView มักติดข้อจำกัดของ Google
+                — แนะนำเข้าด้วย <strong>อีเมล/รหัสผ่าน</strong> ด้านล่างก่อน
+                (หรือตั้งค่า SHA-1 ของ Play ใน Google Cloud เพื่อเปิด Google Login เต็มรูปแบบ)
+              </p>
+              <button
+                type="button"
+                className="auth-social-btn auth-social-btn--google"
+                style={{ marginTop: 10 }}
+                disabled={busy}
+                onClick={() => {
+                  setShowEmail(true)
+                  toast('กรอกอีเมล/รหัสผ่านด้านล่างได้เลย')
+                }}
+              >
+                ใช้ Google / Gmail → แนะนำเข้าด้วยอีเมล
+              </button>
+            </div>
           ) : (
             <button
               type="button"

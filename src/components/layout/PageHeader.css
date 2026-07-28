@@ -5,8 +5,8 @@
   display: grid;
   grid-template-columns: 40px 1fr 40px;
   align-items: center;
-  min-height: var(--header-height);
-  padding: 0 8px;
+  min-height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 8px 0;
   border-bottom: 1px solid var(--border);
 }
 
