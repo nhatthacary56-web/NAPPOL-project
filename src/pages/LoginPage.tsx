@@ -77,6 +77,8 @@ export function LoginPage() {
   }, [])
 
   useEffect(() => {
+    // GSI button ไม่เสถียรใน Android WebView — ใช้ flow อีเมลบน native แทน
+    if (isNativeApp) return
     if (!providers?.googleClientId || !googleBtnRef.current) return
     const clientId = providers.googleClientId
 
@@ -113,7 +115,7 @@ export function LoginPage() {
     script.async = true
     script.onload = mountButton
     document.body.appendChild(script)
-  }, [providers?.googleClientId, loginWithGoogle, toast, navigate, from])
+  }, [isNativeApp, providers?.googleClientId, loginWithGoogle, toast, navigate, from])
 
   async function onRequestOtp(event: FormEvent) {
     event.preventDefault()
