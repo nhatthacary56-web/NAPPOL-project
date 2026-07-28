@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { authApi } from '../api'
 import { PageHeader } from '../components/layout/PageHeader'
 import { useStore } from '../store/StoreContext'
@@ -54,6 +55,7 @@ export function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [providers, setProviders] = useState<Providers | null>(null)
   const googleBtnRef = useRef<HTMLDivElement>(null)
+  const isNativeApp = Capacitor.isNativePlatform()
 
   useEffect(() => {
     setName(user?.name ?? '')
@@ -80,6 +82,7 @@ export function SettingsPage() {
   }, [])
 
   useEffect(() => {
+    if (isNativeApp) return
     if (!providers?.googleClientId || !googleBtnRef.current || user?.googleLinked) return
     const clientId = providers.googleClientId
 
@@ -115,7 +118,7 @@ export function SettingsPage() {
     script.async = true
     script.onload = mountButton
     document.body.appendChild(script)
-  }, [providers?.googleClientId, user?.googleLinked, linkGoogle, toast])
+  }, [isNativeApp, providers?.googleClientId, user?.googleLinked, linkGoogle, toast])
 
   if (!user) return <Navigate to="/login" replace state={{ from: '/settings' }} />
 
@@ -305,8 +308,12 @@ export function SettingsPage() {
               >
                 ยกเลิกเชื่อม
               </button>
-            ) : providers?.googleClientId ? (
+            ) : providers?.googleClientId && !isNativeApp ? (
               <div ref={googleBtnRef} />
+            ) : providers?.googleClientId && isNativeApp ? (
+              <em style={{ fontSize: 12, color: 'var(--muted, #666)' }}>
+                บนแอปให้เข้าด้วยอีเมล — ปุ่ม Google ใน WebView มักใช้ไม่ได้
+              </em>
             ) : (
               <button
                 type="button"
