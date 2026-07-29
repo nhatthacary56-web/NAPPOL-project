@@ -259,24 +259,28 @@ router.get('/providers', (_req, res) => {
 })
 
 /** ตรวจสถานะ SMS โดยไม่เปิดเผยคีย์ — ใช้ไล่บั๊ก OTP ไม่มา */
-router.get('/sms-status', (_req, res) => {
+router.get('/sms-status', async (_req, res) => {
   const p = authProviders()
-  const sms = getBoostSmsPublicStatus()
+  const sms = await getBoostSmsPublicStatus()
   const configError = getBoostSmsConfigError()
   res.json({
     ok: true,
     smsReady: p.smsReady && !configError,
     demoOtp: p.demoOtp,
     sender: sms.sender,
+    resolvedSender: sms.resolvedSender,
+    approvedSenders: sms.approvedSenders || [],
     keyLooksOk: sms.keyLooksOk,
     configError,
     hint: configError
       ? configError
       : !p.smsReady
         ? 'ตั้ง BOOST_SMS_API_KEY บน Render แล้ว Redeploy'
-        : p.demoOtp
-          ? 'ตอนนี้โหมดทดลอง (AUTH_DEMO_OTP=1) — จะไม่ส่ง SMS จริง'
-          : 'พร้อมส่ง SMS จริงเมื่อกดขอ OTP',
+        : (sms.approvedSenders || []).length === 0
+          ? 'API Key ใช้ได้ แต่ยังไม่พบชื่อผู้ส่งที่อนุมัติ — ตรวจใน BoostSMS เมนู Senders'
+          : p.demoOtp
+            ? 'ตอนนี้โหมดทดลอง (AUTH_DEMO_OTP=1) — จะไม่ส่ง SMS จริง'
+            : `พร้อมส่ง SMS · จะใช้ผู้ส่ง: ${sms.resolvedSender || sms.sender}`,
   })
 })
 
