@@ -14,7 +14,7 @@ import {
 } from '../db.js'
 import { signToken, requireAuth } from '../auth.js'
 import { createRateLimiter } from '../rateLimit.js'
-import { isBoostSmsConfigured, sendBoostOtpSms, getBoostSmsPublicStatus } from '../boostSms.js'
+import { isBoostSmsConfigured, sendBoostOtpSms, getBoostSmsPublicStatus, getBoostSmsConfigError } from '../boostSms.js'
 
 const router = Router()
 
@@ -255,16 +255,21 @@ router.get('/providers', (_req, res) => {
 router.get('/sms-status', (_req, res) => {
   const p = authProviders()
   const sms = getBoostSmsPublicStatus()
+  const configError = getBoostSmsConfigError()
   res.json({
     ok: true,
-    smsReady: p.smsReady,
+    smsReady: p.smsReady && !configError,
     demoOtp: p.demoOtp,
     sender: sms.sender,
-    hint: !p.smsReady
-      ? 'ตั้ง BOOST_SMS_API_KEY บน Render แล้ว Redeploy'
-      : p.demoOtp
-        ? 'ตอนนี้โหมดทดลอง (AUTH_DEMO_OTP=1) — จะไม่ส่ง SMS จริง'
-        : 'พร้อมส่ง SMS จริงเมื่อกดขอ OTP',
+    keyLooksOk: sms.keyLooksOk,
+    configError,
+    hint: configError
+      ? configError
+      : !p.smsReady
+        ? 'ตั้ง BOOST_SMS_API_KEY บน Render แล้ว Redeploy'
+        : p.demoOtp
+          ? 'ตอนนี้โหมดทดลอง (AUTH_DEMO_OTP=1) — จะไม่ส่ง SMS จริง'
+          : 'พร้อมส่ง SMS จริงเมื่อกดขอ OTP',
   })
 })
 
@@ -369,6 +374,10 @@ router.post('/otp/request', otpRequestLimiter, async (req, res) => {
   persist()
 
   if (!providers.demoOtp) {
+    const configError = getBoostSmsConfigError()
+    if (configError) {
+      return res.status(400).json({ ok: false, message: configError })
+    }
     try {
       const brand =
         String(process.env.SMS_BRAND_NAME || process.env.BRAND_NAME || 'DeeJa').trim() || 'DeeJa'
@@ -377,11 +386,13 @@ router.post('/otp/request', otpRequestLimiter, async (req, res) => {
       db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
       persist()
       console.error('[boost-sms] send failed:', error.message || error, error.detail || '')
+      const configHint = getBoostSmsConfigError()
       return res.status(502).json({
         ok: false,
-        message:
-          error.status === 401
-            ? 'API Key ของ BoostSMS ไม่ถูกต้อง'
+        message: configHint
+          ? configHint
+          : error.status === 401
+            ? 'API Key ของ BoostSMS ไม่ถูกต้อง — ตรวจ BOOST_SMS_API_KEY ต้องเป็น Secret Key (sk_live_...) ไม่ใช่ Key ID และไม่ใส่ในช่อง SENDER'
             : error.status === 429
               ? 'ขอ OTP บ่อยเกินไปจากผู้ให้บริการ SMS — รอสักครู่แล้วลองใหม่'
               : `ส่ง SMS ไม่สำเร็จ: ${error.message || 'ลองใหม่ภายหลัง'}`,

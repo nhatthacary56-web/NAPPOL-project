@@ -1,23 +1,66 @@
 const BASE = 'https://app.boost-sms.com'
 
 function apiKey() {
-  return String(process.env.BOOST_SMS_API_KEY || '').trim()
+  return String(process.env.BOOST_SMS_API_KEY || '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
 }
 
-function senderName() {
-  return String(process.env.BOOST_SMS_SENDER || process.env.BOOST_SMS_SENDER_NAME || 'DeeJa').trim() || 'DeeJa'
+function senderNameRaw() {
+  return String(process.env.BOOST_SMS_SENDER || process.env.BOOST_SMS_SENDER_NAME || '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+}
+
+function looksLikeSecretKey(value) {
+  return /^sk_(live|test)_/i.test(String(value || ''))
+}
+
+function looksLikeKeyId(value) {
+  return /^cms[a-z0-9]+$/i.test(String(value || ''))
 }
 
 export function isBoostSmsConfigured() {
   return Boolean(apiKey())
 }
 
+export function getBoostSmsConfigError() {
+  const key = apiKey()
+  const sender = senderNameRaw()
+  if (!key) return 'ยังไม่ได้ตั้ง BOOST_SMS_API_KEY'
+  if (looksLikeKeyId(key)) {
+    return 'BOOST_SMS_API_KEY ตอนนี้เหมือน Key ID — ต้องใส่ Secret Key ที่ขึ้นต้น sk_live_...'
+  }
+  if (!looksLikeSecretKey(key)) {
+    return 'BOOST_SMS_API_KEY ควรเป็น Secret Key รูปแบบ sk_live_...'
+  }
+  if (looksLikeSecretKey(sender)) {
+    return 'ใส่ Secret Key ผิดช่องที่ BOOST_SMS_SENDER — ช่องนี้ต้องเป็นชื่อผู้ส่งที่อนุมัติใน BoostSMS (เช่น DeeJa) ไม่ใช่ sk_live_...'
+  }
+  if (!sender) {
+    return 'ยังไม่ได้ตั้ง BOOST_SMS_SENDER (ชื่อผู้ส่งที่อนุมัติแล้ว)'
+  }
+  return null
+}
+
 export function getBoostSmsPublicStatus() {
+  const key = apiKey()
+  const sender = senderNameRaw()
+  const configError = getBoostSmsConfigError()
   return {
-    configured: isBoostSmsConfigured(),
-    sender: senderName(),
+    configured: Boolean(key),
+    // อย่าโชว์ค่าที่หน้าเหมือน secret
+    sender: looksLikeSecretKey(sender) ? '(ผิดช่อง: ใส่ sk_live ไว้ที่ SENDER)' : sender || '(ยังไม่ตั้ง)',
+    keyLooksOk: looksLikeSecretKey(key) && !looksLikeKeyId(key),
+    configError,
     baseUrl: BASE,
   }
+}
+
+function senderName() {
+  const raw = senderNameRaw()
+  if (!raw || looksLikeSecretKey(raw)) return 'DeeJa'
+  return raw
 }
 
 /** แปลงเป็น 08xxxxxxxx */
@@ -37,6 +80,14 @@ async function boostFetch(path, { method = 'GET', body } = {}) {
     err.code = 'NO_KEY'
     throw err
   }
+  const configError = getBoostSmsConfigError()
+  if (configError) {
+    const err = new Error(configError)
+    err.code = 'BAD_CONFIG'
+    err.status = 400
+    throw err
+  }
+
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: {
@@ -73,7 +124,7 @@ async function boostFetch(path, { method = 'GET', body } = {}) {
  * ส่ง SMS ตามตัวอย่างเอกสาร:
  * recipient / message / senderName
  */
-export async function sendBoostSms({ recipient, message, sender }) {
+export function sendBoostSms({ recipient, message, sender }) {
   const to = phoneForBoostSms(recipient)
   if (!to || to.length < 10) {
     const err = new Error('เบอร์โทรไม่ถูกต้องสำหรับส่ง SMS')
@@ -94,7 +145,7 @@ export async function sendBoostOtpSms(phone, code, brand = 'DeeJa') {
   try {
     return await sendBoostSms({ recipient: phone, message })
   } catch (smsErr) {
-    // fallback: OTP endpoint ของ BoostSMS (ถ้ารองรับ)
+    if (smsErr.code === 'BAD_CONFIG' || smsErr.code === 'NO_KEY') throw smsErr
     const to = phoneForBoostSms(phone)
     try {
       return await boostFetch('/api/v1/otp/send', {
