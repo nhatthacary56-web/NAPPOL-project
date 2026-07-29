@@ -270,6 +270,8 @@ router.get('/sms-status', async (_req, res) => {
     sender: sms.sender,
     resolvedSender: sms.resolvedSender,
     approvedSenders: sms.approvedSenders || [],
+    sendersProbe: sms.sendersProbe || [],
+    nextStep: sms.nextStep,
     keyLooksOk: sms.keyLooksOk,
     configError,
     hint: configError
@@ -277,7 +279,7 @@ router.get('/sms-status', async (_req, res) => {
       : !p.smsReady
         ? 'ตั้ง BOOST_SMS_API_KEY บน Render แล้ว Redeploy'
         : (sms.approvedSenders || []).length === 0
-          ? 'API Key ใช้ได้ แต่ยังไม่พบชื่อผู้ส่งที่อนุมัติ — ตรวจใน BoostSMS เมนู Senders'
+          ? 'ยังไม่มี Sender ที่อนุมัติ — ไป BoostSMS → Senders สร้างชื่อผู้ส่ง รออนุมัติ แล้วใส่ BOOST_SMS_SENDER บน Render (ระหว่างนี้ระบบจะลองส่งผ่าน OTP API)'
           : p.demoOtp
             ? 'ตอนนี้โหมดทดลอง (AUTH_DEMO_OTP=1) — จะไม่ส่ง SMS จริง'
             : `พร้อมส่ง SMS · จะใช้ผู้ส่ง: ${sms.resolvedSender || sms.sender}`,
@@ -397,16 +399,21 @@ router.post('/otp/request', otpRequestLimiter, async (req, res) => {
     try {
       const brand =
         String(process.env.SMS_BRAND_NAME || process.env.BRAND_NAME || 'DeeJa').trim() || 'DeeJa'
-      await sendBoostOtpSms(phone, code, brand)
-      // เก็บรหัสเดิมอีกครั้งหลังส่งสำเร็จ (กันถูก overwrite)
-      setMemOtp(phone, code, { ttlMs, channel: 'sms' })
+      const sent = await sendBoostOtpSms(phone, code, brand)
+      const finalCode = String(sent?.code || code).replace(/\D/g, '') || code
+      setMemOtp(phone, finalCode, { ttlMs, channel: sent?.channel || 'sms' })
       const entry = (db.otpCodes || []).find((o) => o.phone === phone)
       if (entry) {
-        entry.code = code
-        entry.channel = 'sms'
+        entry.code = finalCode
+        entry.channel = sent?.channel || 'sms'
         entry.expiresAt = Date.now() + ttlMs
       } else {
-        db.otpCodes.push({ phone, code, expiresAt: Date.now() + ttlMs, channel: 'sms' })
+        db.otpCodes.push({
+          phone,
+          code: finalCode,
+          expiresAt: Date.now() + ttlMs,
+          channel: sent?.channel || 'sms',
+        })
       }
       await flushPersist()
     } catch (error) {
