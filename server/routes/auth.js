@@ -14,7 +14,7 @@ import {
 } from '../db.js'
 import { signToken, requireAuth } from '../auth.js'
 import { createRateLimiter } from '../rateLimit.js'
-import { isBoostSmsConfigured, sendBoostOtpSms } from '../boostSms.js'
+import { isBoostSmsConfigured, sendBoostOtpSms, getBoostSmsPublicStatus } from '../boostSms.js'
 
 const router = Router()
 
@@ -248,6 +248,23 @@ router.get('/providers', (_req, res) => {
       demoSocial: p.demoSocial && !p.googleClientId && !lineReady,
       smsReady: p.smsReady,
     },
+  })
+})
+
+/** ตรวจสถานะ SMS โดยไม่เปิดเผยคีย์ — ใช้ไล่บั๊ก OTP ไม่มา */
+router.get('/sms-status', (_req, res) => {
+  const p = authProviders()
+  const sms = getBoostSmsPublicStatus()
+  res.json({
+    ok: true,
+    smsReady: p.smsReady,
+    demoOtp: p.demoOtp,
+    sender: sms.sender,
+    hint: !p.smsReady
+      ? 'ตั้ง BOOST_SMS_API_KEY บน Render แล้ว Redeploy'
+      : p.demoOtp
+        ? 'ตอนนี้โหมดทดลอง (AUTH_DEMO_OTP=1) — จะไม่ส่ง SMS จริง'
+        : 'พร้อมส่ง SMS จริงเมื่อกดขอ OTP',
   })
 })
 

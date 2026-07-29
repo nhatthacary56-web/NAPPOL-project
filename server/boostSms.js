@@ -12,7 +12,15 @@ export function isBoostSmsConfigured() {
   return Boolean(apiKey())
 }
 
-/** แปลงเป็นรูปแบบที่ SMS gateway มักรับ: 08xxxxxxxx */
+export function getBoostSmsPublicStatus() {
+  return {
+    configured: isBoostSmsConfigured(),
+    sender: senderName(),
+    baseUrl: BASE,
+  }
+}
+
+/** แปลงเป็น 08xxxxxxxx */
 export function phoneForBoostSms(phone) {
   const digits = String(phone || '').replace(/\D/g, '')
   if (!digits) return ''
@@ -49,8 +57,9 @@ async function boostFetch(path, { method = 'GET', body } = {}) {
     const msg =
       json?.message ||
       json?.error ||
+      json?.error_message ||
       json?.detail ||
-      (typeof json?.raw === 'string' && json.raw) ||
+      (typeof json?.raw === 'string' && json.raw.slice(0, 200)) ||
       `BoostSMS HTTP ${res.status}`
     const err = new Error(String(msg))
     err.status = res.status
@@ -61,12 +70,13 @@ async function boostFetch(path, { method = 'GET', body } = {}) {
 }
 
 /**
- * ส่ง SMS ทั่วไป — ตามตัวอย่าง SDK: recipient / message / senderName
+ * ส่ง SMS ตามตัวอย่างเอกสาร:
+ * recipient / message / senderName
  */
 export async function sendBoostSms({ recipient, message, sender }) {
   const to = phoneForBoostSms(recipient)
-  if (!to || to.length < 9) {
-    const err = new Error('เบอร์โทรไม่ถูกต้อง')
+  if (!to || to.length < 10) {
+    const err = new Error('เบอร์โทรไม่ถูกต้องสำหรับส่ง SMS')
     err.code = 'BAD_PHONE'
     throw err
   }
@@ -75,59 +85,29 @@ export async function sendBoostSms({ recipient, message, sender }) {
     message: String(message || '').trim(),
     senderName: String(sender || senderName()).trim(),
   }
-  try {
-    return await boostFetch('/api/v1/sms/send', { method: 'POST', body: payload })
-  } catch (first) {
-    // ลองชื่อฟิลด์สำรองถ้า API ใช้คนละชื่อ
-    if (first.status === 400) {
-      try {
-        return await boostFetch('/api/v1/sms/send', {
-          method: 'POST',
-          body: {
-            phone: to,
-            to,
-            text: payload.message,
-            message: payload.message,
-            sender: payload.senderName,
-            senderName: payload.senderName,
-            from: payload.senderName,
-          },
-        })
-      } catch {
-        throw first
-      }
-    }
-    throw first
-  }
+  return boostFetch('/api/v1/sms/send', { method: 'POST', body: payload })
 }
 
-/** ส่งรหัส OTP ผ่าน SMS (เราเจนรหัสเอง แล้ว verify ในเซิร์ฟเวอร์เรา) */
+/** ส่ง OTP: ใช้ sms/send เป็นหลัก (เราสร้างรหัสเองแล้ว verify ในเซิร์ฟเรา) */
 export async function sendBoostOtpSms(phone, code, brand = 'DeeJa') {
   const message = `${brand}: รหัส OTP ของคุณคือ ${code} (ใช้ได้ 5 นาที) ห้ามบอกผู้อื่น`
-  // ลอง OTP endpoint ก่อน ถ้าไม่มี/พัง ค่อย sms/send
-  const to = phoneForBoostSms(phone)
   try {
-    return await boostFetch('/api/v1/otp/send', {
-      method: 'POST',
-      body: {
-        recipient: to,
-        phone: to,
-        code: String(code),
-        otp: String(code),
-        message,
-        senderName: senderName(),
-      },
-    })
-  } catch (otpErr) {
-    // 404/405 = ไม่มี endpoint แบบนี้ → ใช้ sms/send
-    if (otpErr.status === 404 || otpErr.status === 405) {
-      return sendBoostSms({ recipient: to, message })
-    }
-    // บางระบบ otp/send ไม่รับ code (เจนเอง) — fallback ส่งข้อความเอง
+    return await sendBoostSms({ recipient: phone, message })
+  } catch (smsErr) {
+    // fallback: OTP endpoint ของ BoostSMS (ถ้ารองรับ)
+    const to = phoneForBoostSms(phone)
     try {
-      return await sendBoostSms({ recipient: to, message })
+      return await boostFetch('/api/v1/otp/send', {
+        method: 'POST',
+        body: {
+          recipient: to,
+          phone: to,
+          message,
+          senderName: senderName(),
+        },
+      })
     } catch {
-      throw otpErr
+      throw smsErr
     }
   }
 }
