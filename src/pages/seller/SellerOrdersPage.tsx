@@ -4,7 +4,7 @@ import { formatPrice } from '../../data/catalog'
 import { metaApi, orderApi } from '../../api'
 import { statusLabel, useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
-import type { OrderStatus } from '../../api/types'
+import type { ApiOrder, OrderStatus } from '../../api/types'
 import './SellerShell.css'
 
 const STATUS_FILTERS: Array<{ id: '' | OrderStatus | 'cancelled'; label: string }> = [
@@ -24,6 +24,14 @@ const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
 
 const FALLBACK_CARRIERS = ['Kerry Express', 'Flash Express', 'J&T Express', 'Thai Post', 'SPX']
 
+function fulfillmentLabel(order: ApiOrder) {
+  const f = order.fulfillment
+  if (f?.pickupScheduledAt) return f.method === 'dropoff' ? 'ไปส่งสาขา' : 'นัดรับแล้ว'
+  if (f?.packedAt) return 'แพ็คแล้ว'
+  if (f?.labelPrintedAt) return 'พิมพ์แล้ว'
+  return null
+}
+
 export function SellerOrdersPage() {
   const { orders, updateOrderStatus, refreshOrders } = useStore()
   const { toast } = useToast()
@@ -36,6 +44,7 @@ export function SellerOrdersPage() {
   const [carrier, setCarrier] = useState(FALLBACK_CARRIERS[0])
   const [zortReady, setZortReady] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const filteredOrders = useMemo(() => {
     if (!statusFilter) return orders
@@ -44,6 +53,19 @@ export function SellerOrdersPage() {
     }
     return orders.filter((o) => o.status === statusFilter)
   }, [orders, statusFilter])
+
+  const printableSelected = useMemo(
+    () =>
+      filteredOrders.filter(
+        (o) =>
+          selected.has(o.id) &&
+          (o.status === 'to_ship' || o.status === 'shipping' || Boolean(o.trackingNumber)),
+      ),
+    [filteredOrders, selected],
+  )
+
+  const allFilteredSelected =
+    filteredOrders.length > 0 && filteredOrders.every((o) => selected.has(o.id))
 
   useEffect(() => {
     void orderApi
@@ -64,6 +86,23 @@ export function SellerOrdersPage() {
       })
       .catch(() => {})
   }, [])
+
+  function toggleAll() {
+    if (allFilteredSelected) {
+      setSelected(new Set())
+      return
+    }
+    setSelected(new Set(filteredOrders.map((o) => o.id)))
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   async function advance(orderId: string, status: OrderStatus) {
     if (status === 'shipping') {
@@ -108,13 +147,31 @@ export function SellerOrdersPage() {
     }
   }
 
+  function printSelected() {
+    const ids = printableSelected.map((o) => o.id)
+    if (!ids.length) {
+      toast('เลือกออเดอร์ที่ต้องจัดส่ง/กำลังส่งก่อน')
+      return
+    }
+    const qs = new URLSearchParams({ ids: ids.join(','), print: '1' })
+    window.open(`/orders/labels?${qs.toString()}`, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div className="seller-page">
-      <h1>ออเดอร์ร้าน</h1>
-      <p className="seller-page__sub">
-        เรียกขนส่งผ่าน ZORT ได้เลขพัสดุ แล้วพิมพ์ใบปะหน้าบน Great App ได้เลย (ไม่ต้องเข้าเว็บขนส่ง)
-        {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
-      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <h1>ออเดอร์ร้าน</h1>
+          <p className="seller-page__sub">
+            เรียกขนส่งผ่าน ZORT ได้เลขพัสดุ แล้วพิมพ์ใบปะหน้าบน Great App ได้เลย (ไม่ต้องเข้าเว็บขนส่ง)
+            {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
+          </p>
+        </div>
+        <Link className="seller-btn" to="/seller/orders/mass-ship">
+          จัดส่งแบบชุด
+        </Link>
+      </div>
+
       <div className="seller-tabs" role="tablist" aria-label="กรองสถานะออเดอร์">
         {STATUS_FILTERS.map((tab) => (
           <button
@@ -122,6 +179,7 @@ export function SellerOrdersPage() {
             type="button"
             className={statusFilter === tab.id ? 'is-active' : undefined}
             onClick={() => {
+              setSelected(new Set())
               if (!tab.id) setSearchParams({})
               else setSearchParams({ status: tab.id })
             }}
@@ -132,9 +190,19 @@ export function SellerOrdersPage() {
       </div>
 
       <div className="seller-card">
-        <button type="button" className="seller-btn ghost" onClick={() => void refreshOrders()}>
-          รีเฟรช
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <button type="button" className="seller-btn ghost" onClick={() => void refreshOrders()}>
+            รีเฟรช
+          </button>
+          <button
+            type="button"
+            className="seller-btn"
+            disabled={!printableSelected.length}
+            onClick={printSelected}
+          >
+            พิมพ์ที่เลือก ({printableSelected.length})
+          </button>
+        </div>
         {filteredOrders.length === 0 ? (
           <p style={{ color: '#6b7280' }}>
             {orders.length === 0 ? 'ยังไม่มีออเดอร์' : 'ไม่มีออเดอร์ในสถานะนี้'}
@@ -143,6 +211,14 @@ export function SellerOrdersPage() {
           <table className="seller-table">
             <thead>
               <tr>
+                <th style={{ width: 36 }}>
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleAll}
+                    aria-label="เลือกทั้งหมด"
+                  />
+                </th>
                 <th>รหัส</th>
                 <th>ลูกค้า</th>
                 <th>ยอด</th>
@@ -153,8 +229,17 @@ export function SellerOrdersPage() {
             <tbody>
               {filteredOrders.map((order) => {
                 const advanceTo = nextStatus[order.status]
+                const sub = fulfillmentLabel(order)
                 return (
                   <tr key={order.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(order.id)}
+                        onChange={() => toggleOne(order.id)}
+                        aria-label={`เลือก ${order.id}`}
+                      />
+                    </td>
                     <td>{order.id}</td>
                     <td>
                       {order.address.name}
@@ -168,12 +253,17 @@ export function SellerOrdersPage() {
                     </td>
                     <td>
                       {statusLabel(order.status)}
+                      {sub ? (
+                        <div style={{ color: '#0f766e', fontSize: 12, fontWeight: 700 }}>{sub}</div>
+                      ) : null}
                       {order.trackingNumber ? (
                         <div style={{ color: '#6b7280', fontSize: 12 }}>
                           {order.carrier} · {order.trackingNumber}
                         </div>
                       ) : null}
-                      {order.trackingNumber || order.status === 'shipping' || order.status === 'to_ship' ? (
+                      {order.trackingNumber ||
+                      order.status === 'shipping' ||
+                      order.status === 'to_ship' ? (
                         <div>
                           <Link
                             to={`/orders/${order.id}/label`}

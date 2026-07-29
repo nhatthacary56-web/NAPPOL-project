@@ -275,6 +275,19 @@ export const orderApi = {
     api<{ ok: true; order: ApiOrder; shippingLabelUrl?: string | null }>(
       `/orders/${id}/zort/label`,
     ),
+  bulkFulfillment: (body: {
+    orderIds: string[]
+    action: 'label_printed' | 'packed' | 'schedule_pickup' | 'dropoff'
+    pickupSlot?: string
+    pickupNote?: string
+    carrier?: string
+  }) =>
+    api<{
+      ok: true
+      updated: number
+      skipped: Array<{ id: string; reason: string }>
+      orders: ApiOrder[]
+    }>('/orders/bulk/fulfillment', { method: 'POST', json: body }),
 }
 
 export const chatApi = {

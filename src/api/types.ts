@@ -121,6 +121,16 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded'
 
+/** สถานะย่อยฝั่งจัดส่ง — ไม่แทนที่ status หลัก */
+export type OrderFulfillment = {
+  labelPrintedAt?: string | null
+  packedAt?: string | null
+  pickupScheduledAt?: string | null
+  pickupSlot?: string | null
+  pickupNote?: string | null
+  method?: 'pickup' | 'dropoff' | null
+}
+
 export type ApiOrder = {
   id: string
   userId: string
@@ -150,6 +160,7 @@ export type ApiOrder = {
   zortOrderId?: number | string | null
   zortOrderNumber?: string | null
   shippingLabelUrl?: string | null
+  fulfillment?: OrderFulfillment
   settlements?: Record<
     string,
     { gross: number; fee: number; net: number; status: string }

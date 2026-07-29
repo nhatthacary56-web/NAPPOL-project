@@ -144,6 +144,94 @@ router.get('/seller', requireAuth, (req, res) => {
   res.json({ ok: true, orders })
 })
 
+router.post('/bulk/fulfillment', requireAuth, (req, res) => {
+  if (req.user.role !== 'seller' && req.user.role !== 'admin') {
+    return res.status(403).json({ ok: false, message: 'ไม่มีสิทธิ์' })
+  }
+  const shop = req.user.role === 'seller' ? getShopByOwner(req.user.id) : null
+  if (req.user.role === 'seller' && !shop) {
+    return res.status(400).json({ ok: false, message: 'ยังไม่มีร้าน' })
+  }
+
+  const {
+    orderIds,
+    action,
+    pickupSlot,
+    pickupNote,
+    carrier,
+  } = req.body ?? {}
+  const ids = Array.isArray(orderIds)
+    ? [...new Set(orderIds.map((id) => String(id || '').trim()).filter(Boolean))]
+    : []
+  const allowedActions = ['label_printed', 'packed', 'schedule_pickup', 'dropoff']
+  if (!ids.length) {
+    return res.status(400).json({ ok: false, message: 'เลือกรายการออเดอร์ก่อน' })
+  }
+  if (!allowedActions.includes(action)) {
+    return res.status(400).json({ ok: false, message: 'action ไม่ถูกต้อง' })
+  }
+
+  const db = getDb()
+  const now = new Date().toISOString()
+  const updated = []
+  const skipped = []
+
+  for (const id of ids) {
+    const order = db.orders.find((o) => o.id === id)
+    if (!order) {
+      skipped.push({ id, reason: 'ไม่พบออเดอร์' })
+      continue
+    }
+    const isSellerOfOrder =
+      req.user.role === 'admin' ||
+      (shop && order.items.some((i) => i.shopId === shop.id))
+    if (!isSellerOfOrder) {
+      skipped.push({ id, reason: 'ไม่มีสิทธิ์' })
+      continue
+    }
+    if (!['to_ship', 'shipping'].includes(order.status)) {
+      skipped.push({ id, reason: 'สถานะยังไม่พร้อมจัดส่ง' })
+      continue
+    }
+
+    order.fulfillment = { ...(order.fulfillment || {}) }
+    if (carrier && String(carrier).trim()) {
+      order.carrier = String(carrier).trim()
+    }
+
+    if (action === 'label_printed') {
+      order.fulfillment.labelPrintedAt = now
+    } else if (action === 'packed') {
+      order.fulfillment.packedAt = now
+      if (!order.fulfillment.labelPrintedAt) order.fulfillment.labelPrintedAt = now
+    } else if (action === 'schedule_pickup') {
+      order.fulfillment.method = 'pickup'
+      order.fulfillment.pickupScheduledAt = now
+      order.fulfillment.pickupSlot = String(pickupSlot || '').trim() || null
+      order.fulfillment.pickupNote = String(pickupNote || '').trim() || null
+      if (!order.fulfillment.packedAt) order.fulfillment.packedAt = now
+      if (!order.fulfillment.labelPrintedAt) order.fulfillment.labelPrintedAt = now
+    } else if (action === 'dropoff') {
+      order.fulfillment.method = 'dropoff'
+      order.fulfillment.pickupScheduledAt = now
+      order.fulfillment.pickupSlot = null
+      order.fulfillment.pickupNote = String(pickupNote || 'ไปส่งสาขาเอง').trim() || 'ไปส่งสาขาเอง'
+      if (!order.fulfillment.packedAt) order.fulfillment.packedAt = now
+      if (!order.fulfillment.labelPrintedAt) order.fulfillment.labelPrintedAt = now
+    }
+
+    updated.push(order)
+  }
+
+  persist()
+  return res.json({
+    ok: true,
+    updated: updated.length,
+    skipped,
+    orders: updated,
+  })
+})
+
 router.get('/zort/status', requireAuth, (_req, res) => {
   res.json({
     ok: true,

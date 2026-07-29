@@ -4,6 +4,7 @@ import './SellerShell.css'
 const basicTools = [
   { to: '/seller/products', label: 'เพิ่ม/จัดการสินค้า', icon: '📦', tone: '#dbeafe' },
   { to: '/seller/orders', label: 'คำสั่งซื้อ', icon: '📋', tone: '#ede9fe' },
+  { to: '/seller/orders/mass-ship', label: 'จัดส่งแบบชุด', icon: '📦', tone: '#ffedd5' },
   { to: '/seller/returns', label: 'สินค้าส่งคืน', icon: '↩️', tone: '#fce7f3' },
   { to: '/seller/wallet', label: 'รายรับของฉัน', icon: '💰', tone: '#d1fae5' },
   { to: '/seller/vouchers', label: 'คูปองร้าน', icon: '🎟️', tone: '#ffedd5' },

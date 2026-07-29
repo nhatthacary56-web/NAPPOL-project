@@ -292,6 +292,15 @@
   background: #fafafa;
 }
 
+.ship-label-page--batch .ship-label-batch__sheet {
+  margin: 0 auto 24px;
+  max-width: 420px;
+}
+
+.ship-label-page--batch .ship-label-batch__sheet:last-child {
+  margin-bottom: 0;
+}
+
 @media print {
   @page {
     size: 100mm 150mm;
@@ -313,6 +322,18 @@
     width: 100%;
     border-width: 2px;
     page-break-inside: avoid;
+  }
+
+  .ship-label-batch__sheet {
+    max-width: none;
+    margin: 0;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .ship-label-batch__sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
 
   .ship-label__logo {

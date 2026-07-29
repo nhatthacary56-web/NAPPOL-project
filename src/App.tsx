@@ -18,6 +18,7 @@ import { CheckoutPage } from './pages/CheckoutPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { ShippingLabelPage } from './pages/ShippingLabelPage'
+import { BatchShippingLabelsPage } from './pages/BatchShippingLabelsPage'
 import { VisualSearchPage } from './pages/VisualSearchPage'
 import { WishlistPage } from './pages/WishlistPage'
 import { VouchersPage } from './pages/VouchersPage'
@@ -50,6 +51,7 @@ import { SellerShell } from './pages/seller/SellerShell'
 import { SellerDashboardPage } from './pages/seller/SellerDashboardPage'
 import { SellerProductsPage } from './pages/seller/SellerProductsPage'
 import { SellerOrdersPage } from './pages/seller/SellerOrdersPage'
+import { SellerMassShipPage } from './pages/seller/SellerMassShipPage'
 import { SellerShopPage } from './pages/seller/SellerShopPage'
 import { SellerWalletPage } from './pages/seller/SellerWalletPage'
 import { SellerReturnsPage } from './pages/seller/SellerReturnsPage'
@@ -98,6 +100,7 @@ export default function App() {
         <Route path="vouchers" element={<SellerVouchersPage />} />
         <Route path="products" element={<SellerProductsPage />} />
         <Route path="orders" element={<SellerOrdersPage />} />
+        <Route path="orders/mass-ship" element={<SellerMassShipPage />} />
         <Route path="returns" element={<SellerReturnsPage />} />
         <Route path="wallet" element={<SellerWalletPage />} />
         <Route path="shop" element={<SellerShopPage />} />
@@ -164,6 +167,14 @@ export default function App() {
         element={
           <RequireAuth>
             <OrderDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="orders/labels"
+        element={
+          <RequireAuth>
+            <BatchShippingLabelsPage />
           </RequireAuth>
         }
       />
