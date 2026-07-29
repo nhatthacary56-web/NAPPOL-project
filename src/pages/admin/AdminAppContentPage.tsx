@@ -748,13 +748,16 @@ export function AdminAppContentPage() {
         <form className="admin-card admin-form" onSubmit={saveContent}>
           <h2 style={{ marginTop: 0, fontSize: 16 }}>นโยบายที่ลูกค้าอ่านได้</h2>
           <p style={{ color: '#6b7280', fontSize: 13, marginTop: 0 }}>
-            หน้า <Link to="/privacy">/privacy</Link> · <Link to="/terms">/terms</Link> ·{' '}
+            หน้าในแอป <Link to="/privacy">/privacy</Link> · <Link to="/terms">/terms</Link> ·{' '}
             <Link to="/returns-policy">/returns-policy</Link>
+            <br />
+            ลิงก์ Play Store <a href="/privacy.html" target="_blank" rel="noreferrer">/privacy.html</a>{' '}
+            จะดึงข้อความความเป็นส่วนตัวชุดเดียวกับที่แก้ด้านล่างอัตโนมัติ
           </p>
           <label>
             นโยบายความเป็นส่วนตัว
             <textarea
-              rows={5}
+              rows={12}
               value={content.legal?.privacy || ''}
               onChange={(e) =>
                 setContent({
@@ -771,7 +774,7 @@ export function AdminAppContentPage() {
           <label>
             ข้อกำหนดการใช้งาน
             <textarea
-              rows={5}
+              rows={10}
               value={content.legal?.terms || ''}
               onChange={(e) =>
                 setContent({
@@ -788,7 +791,7 @@ export function AdminAppContentPage() {
           <label>
             นโยบายคืนสินค้า
             <textarea
-              rows={5}
+              rows={10}
               value={content.legal?.returnPolicy || ''}
               onChange={(e) =>
                 setContent({

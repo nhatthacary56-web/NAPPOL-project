@@ -25,6 +25,7 @@ import returnRoutes from './routes/returns.js'
 import helpRoutes from './routes/help.js'
 import feedRoutes from './routes/feed.js'
 import cartRoutes from './routes/cart.js'
+import { renderPrivacyHtml } from './legalHtml.js'
 
 dotenv.config()
 
@@ -43,6 +44,13 @@ app.disable('x-powered-by')
 app.use(cors())
 app.use(express.json({ limit: '2mb' }))
 app.use('/uploads', express.static(uploadsDir))
+
+/** Sync กับ Admin → เนื้อหาแอป → นโยบาย (สำคัญสำหรับลิงก์ Play Store) */
+app.get(['/privacy.html', '/privacy.txt'], (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Cache-Control', 'public, max-age=60')
+  res.send(renderPrivacyHtml())
+})
 
 app.get('/health', (_req, res) => {
   const storage = getStorageStatus()

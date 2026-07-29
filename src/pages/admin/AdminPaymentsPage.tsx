@@ -27,6 +27,7 @@ export function AdminPaymentsPage() {
           carriers: s.carriers || [],
           defaultCarrier: s.defaultCarrier || 'Kerry Express',
           bankAccount: s.bankAccount || emptyBank,
+          massShipEnabled: s.massShipEnabled !== false,
         })
         setCarriersText((s.carriers || []).join('\n'))
       })
@@ -62,6 +63,7 @@ export function AdminPaymentsPage() {
         codMaxAmount: Number(settings.codMaxAmount ?? 0),
         carriers,
         defaultCarrier: settings.defaultCarrier,
+        massShipEnabled: settings.massShipEnabled !== false,
       })
       setSettings({
         ...res.settings,
@@ -71,6 +73,7 @@ export function AdminPaymentsPage() {
           card: false,
         },
         codMaxAmount: Number(res.settings.codMaxAmount ?? 0),
+        massShipEnabled: res.settings.massShipEnabled !== false,
       })
       setCarriersText((res.settings.carriers || []).join('\n'))
       toast('บันทึกการชำระเงินและขนส่งแล้ว')
@@ -280,6 +283,38 @@ export function AdminPaymentsPage() {
             />
           </label>
         </div>
+
+        <h2 style={{ fontSize: 16 }}>เครื่องมือร้าน (Seller)</h2>
+        <label
+          style={{
+            display: 'flex',
+            gap: 10,
+            alignItems: 'flex-start',
+            marginBottom: 16,
+            padding: '12px 14px',
+            border: '1px solid #e5e7eb',
+            borderRadius: 10,
+            background: settings.massShipEnabled !== false ? '#ecfdf5' : '#fafafa',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={settings.massShipEnabled !== false}
+            onChange={(e) =>
+              setSettings((prev) =>
+                prev ? { ...prev, massShipEnabled: e.target.checked } : prev,
+              )
+            }
+            style={{ marginTop: 3 }}
+          />
+          <span>
+            <strong>เปิดจัดส่งแบบชุด (Mass Ship)</strong>
+            <br />
+            <span style={{ fontSize: 12, color: '#6b7280' }}>
+              ให้ร้านพิมพ์ใบปะหน้าหลายใบ · แพ็ค · นัดรับ · เรียก ZORT เป็นชุดได้
+            </span>
+          </span>
+        </label>
 
         <h2 style={{ fontSize: 16 }}>ขนส่ง (หนึ่งบรรทัดต่อหนึ่งบริษัท)</h2>
         <label>

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, Navigate } from 'react-router-dom'
 import { orderApi } from '../../api'
 import type { ApiOrder } from '../../api/types'
 import { formatPrice } from '../../data/catalog'
+import { useMassShipEnabled } from '../../hooks/useMassShipEnabled'
 import { useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
 import './SellerShell.css'
@@ -32,6 +33,7 @@ function fulfillmentBadge(order: ApiOrder) {
 export function SellerMassShipPage() {
   const { orders, shop, refreshOrders } = useStore()
   const { toast } = useToast()
+  const { massShipEnabled, massShipLoaded } = useMassShipEnabled()
   const [mainTab, setMainTab] = useState<MainTab>('to_ship')
   const [printFilter, setPrintFilter] = useState<PrintFilter>('all')
   const [carrierFilter, setCarrierFilter] = useState('')
@@ -39,6 +41,14 @@ export function SellerMassShipPage() {
   const [pickupSlot, setPickupSlot] = useState(PICKUP_SLOTS[0])
   const [pickupNote, setPickupNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const [zortReady, setZortReady] = useState(false)
+
+  useEffect(() => {
+    void orderApi
+      .zortStatus()
+      .then((res) => setZortReady(res.configured))
+      .catch(() => setZortReady(false))
+  }, [])
 
   const toShipOrders = useMemo(
     () => orders.filter((o) => o.status === 'to_ship'),
@@ -133,9 +143,44 @@ export function SellerMassShipPage() {
     }
   }
 
+  async function runBulkZort() {
+    const ids = selectedOrders.map((o) => o.id)
+    if (!ids.length) {
+      toast('เลือกออเดอร์ก่อนเรียก ZORT')
+      return
+    }
+    if (!zortReady) {
+      toast('ยังไม่ได้ตั้งค่า ZORT บนเซิร์ฟเวอร์')
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await orderApi.bulkZortShip({ orderIds: ids })
+      await refreshOrders()
+      toast(res.message || `เรียก ZORT สำเร็จ ${res.shipped} ใบ`)
+      if (res.shipped > 0) {
+        const qs = new URLSearchParams({
+          ids: res.orders.map((o) => o.id).join(','),
+          print: '1',
+          mark: '0',
+        })
+        window.open(`/orders/labels?${qs.toString()}`, '_blank', 'noopener,noreferrer')
+      }
+      setSelected(new Set())
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'เรียก ZORT เป็นชุดไม่สำเร็จ')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const pickupAddress =
     [shop?.addressLine, shop?.location].filter(Boolean).join(' · ') ||
     'ยังไม่ได้ตั้งที่อยู่ร้าน — ไปที่ตั้งค่าร้าน'
+
+  if (massShipLoaded && !massShipEnabled) {
+    return <Navigate to="/seller/orders" replace />
+  }
 
   return (
     <div className="mass-ship">
@@ -236,6 +281,16 @@ export function SellerMassShipPage() {
               >
                 ทำเครื่องหมายแพ็คแล้ว
               </button>
+              {zortReady ? (
+                <button
+                  type="button"
+                  className="seller-btn"
+                  disabled={!selectedOrders.length || busy}
+                  onClick={() => void runBulkZort()}
+                >
+                  {busy ? 'กำลังเรียก ZORT...' : 'เรียก ZORT ทั้งชุด'}
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -378,6 +433,9 @@ export function SellerMassShipPage() {
 
           <p className="mass-ship__panel-note">
             หลังนัดรับแล้ว ใส่เลขพัสดุที่หน้าออเดอร์เพื่อเปลี่ยนเป็น “กำลังจัดส่ง”
+            {zortReady
+              ? ' หรือกด “เรียก ZORT ทั้งชุด” เพื่อได้เลขพัสดุและอัปเดตเป็นกำลังจัดส่งทันที'
+              : ' · ยังไม่ได้ตั้งค่า ZORT'}
           </p>
         </aside>
       </div>

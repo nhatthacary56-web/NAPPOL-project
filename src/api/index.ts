@@ -288,6 +288,15 @@ export const orderApi = {
       skipped: Array<{ id: string; reason: string }>
       orders: ApiOrder[]
     }>('/orders/bulk/fulfillment', { method: 'POST', json: body }),
+  bulkZortShip: (body: { orderIds: string[]; carrier?: string; force?: boolean }) =>
+    api<{
+      ok: true
+      shipped: number
+      skipped: Array<{ id: string; reason: string }>
+      failed: Array<{ id: string; reason: string }>
+      orders: ApiOrder[]
+      message?: string
+    }>('/orders/bulk/zort/ship', { method: 'POST', json: body }),
 }
 
 export const chatApi = {
@@ -527,6 +536,7 @@ export const metaApi = {
         | 'paymentMethods'
         | 'carriers'
         | 'defaultCarrier'
+        | 'massShipEnabled'
       >
     }>('/storefront-settings'),
 }

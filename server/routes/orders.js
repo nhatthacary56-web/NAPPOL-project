@@ -148,6 +148,10 @@ router.post('/bulk/fulfillment', requireAuth, (req, res) => {
   if (req.user.role !== 'seller' && req.user.role !== 'admin') {
     return res.status(403).json({ ok: false, message: 'ไม่มีสิทธิ์' })
   }
+  const db = getDb()
+  if (db.settings?.massShipEnabled === false) {
+    return res.status(403).json({ ok: false, message: 'แอดมินปิดเครื่องมือจัดส่งแบบชุดชั่วคราว' })
+  }
   const shop = req.user.role === 'seller' ? getShopByOwner(req.user.id) : null
   if (req.user.role === 'seller' && !shop) {
     return res.status(400).json({ ok: false, message: 'ยังไม่มีร้าน' })
@@ -171,7 +175,6 @@ router.post('/bulk/fulfillment', requireAuth, (req, res) => {
     return res.status(400).json({ ok: false, message: 'action ไม่ถูกต้อง' })
   }
 
-  const db = getDb()
   const now = new Date().toISOString()
   const updated = []
   const skipped = []
@@ -229,6 +232,124 @@ router.post('/bulk/fulfillment', requireAuth, (req, res) => {
     updated: updated.length,
     skipped,
     orders: updated,
+  })
+})
+
+router.post('/bulk/zort/ship', requireAuth, async (req, res) => {
+  if (req.user.role !== 'seller' && req.user.role !== 'admin') {
+    return res.status(403).json({ ok: false, message: 'ไม่มีสิทธิ์' })
+  }
+  const db = getDb()
+  if (db.settings?.massShipEnabled === false) {
+    return res.status(403).json({ ok: false, message: 'แอดมินปิดเครื่องมือจัดส่งแบบชุดชั่วคราว' })
+  }
+  if (!isZortConfigured()) {
+    return res.status(503).json({ ok: false, message: 'ยังไม่ได้ตั้งค่า ZORT บนเซิร์ฟเวอร์' })
+  }
+
+  const shop = req.user.role === 'seller' ? getShopByOwner(req.user.id) : null
+  if (req.user.role === 'seller' && !shop) {
+    return res.status(400).json({ ok: false, message: 'ยังไม่มีร้าน' })
+  }
+
+  const ids = Array.isArray(req.body?.orderIds)
+    ? [...new Set(req.body.orderIds.map((id) => String(id || '').trim()).filter(Boolean))]
+    : []
+  if (!ids.length) {
+    return res.status(400).json({ ok: false, message: 'เลือกรายการออเดอร์ก่อน' })
+  }
+  if (ids.length > 30) {
+    return res.status(400).json({ ok: false, message: 'เรียก ZORT ได้สูงสุด 30 ใบต่อครั้ง' })
+  }
+
+  const force = Boolean(req.body?.force)
+  const carrierDefault = String(req.body?.carrier || db.settings?.defaultCarrier || 'Flash Express')
+  const owner = shop ? db.users.find((u) => u.id === shop.ownerId) : null
+  const shopProfile = shop
+    ? {
+        name: shop.name,
+        phone: owner?.phone || '',
+        email: owner?.email || '',
+        address: shop.location || shop.addressLine || '',
+        province: '',
+        district: '',
+        city: '',
+        postcode: '',
+      }
+    : undefined
+
+  const shipped = []
+  const skipped = []
+  const failed = []
+
+  for (const id of ids) {
+    const order = db.orders.find((o) => o.id === id)
+    if (!order) {
+      skipped.push({ id, reason: 'ไม่พบออเดอร์' })
+      continue
+    }
+    const isSellerOfOrder =
+      req.user.role === 'admin' ||
+      (shop && order.items.some((i) => i.shopId === shop.id))
+    if (!isSellerOfOrder) {
+      skipped.push({ id, reason: 'ไม่มีสิทธิ์' })
+      continue
+    }
+    if (order.status === 'unpaid') {
+      skipped.push({ id, reason: 'รอชำระเงิน' })
+      continue
+    }
+    if (!['to_ship', 'shipping'].includes(order.status)) {
+      skipped.push({ id, reason: 'สถานะไม่พร้อม' })
+      continue
+    }
+    if (order.trackingNumber && !force) {
+      skipped.push({ id, reason: 'มีเลขพัสดุแล้ว' })
+      continue
+    }
+
+    const carrier = String(order.carrier || carrierDefault)
+    try {
+      const result = await createShipmentForOrder(order, { carrier, shopProfile })
+      if (!result.trackingNumber) {
+        failed.push({ id, reason: 'ZORT ยังไม่มีเลข Tracking' })
+        continue
+      }
+      order.zortOrderId = result.zortOrderId
+      order.zortOrderNumber = result.zortOrderNumber
+      order.trackingNumber = result.trackingNumber
+      order.carrier = result.carrier
+      order.shippingLabelUrl = result.shippingLabelUrl || order.shippingLabelUrl || null
+      order.status = 'shipping'
+      order.shippedAt = new Date().toISOString()
+      order.fulfillment = {
+        ...(order.fulfillment || {}),
+        labelPrintedAt: order.fulfillment?.labelPrintedAt || new Date().toISOString(),
+        packedAt: order.fulfillment?.packedAt || new Date().toISOString(),
+      }
+      pushNotification(order.userId, {
+        type: 'order',
+        title: 'อัปเดตสถานะคำสั่งซื้อ',
+        body: `ออเดอร์ ${order.id}: กำลังจัดส่ง · ${order.carrier} ${order.trackingNumber}`,
+        link: `/orders/${order.id}`,
+      })
+      shipped.push(order)
+    } catch (error) {
+      failed.push({
+        id,
+        reason: error instanceof Error ? error.message : 'เรียก ZORT ไม่สำเร็จ',
+      })
+    }
+  }
+
+  persist()
+  return res.json({
+    ok: true,
+    shipped: shipped.length,
+    skipped,
+    failed,
+    orders: shipped,
+    message: `เรียก ZORT สำเร็จ ${shipped.length} ใบ · ข้าม ${skipped.length} · ล้มเหลว ${failed.length}`,
   })
 })
 

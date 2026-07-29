@@ -259,6 +259,7 @@ router.get('/storefront-settings', (_req, res) => {
       paymentMethods: s.paymentMethods || { cod: true, transfer: true, card: true },
       carriers: Array.isArray(s.carriers) ? s.carriers : [],
       defaultCarrier: s.defaultCarrier || 'Kerry Express',
+      massShipEnabled: s.massShipEnabled !== false,
     },
   })
 })

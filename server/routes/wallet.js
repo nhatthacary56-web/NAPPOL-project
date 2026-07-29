@@ -195,13 +195,14 @@ router.get('/settings', requireAuth, (_req, res) => {
       codMaxAmount: Number(db.settings.codMaxAmount ?? 0),
       carriers: Array.isArray(db.settings.carriers) ? db.settings.carriers : [],
       defaultCarrier: db.settings.defaultCarrier || 'Kerry Express',
+      massShipEnabled: db.settings.massShipEnabled !== false,
     },
   })
 })
 
 router.put('/settings', requireRole('admin'), (req, res) => {
   const db = getDb()
-  const { commissionRate, promptPayPhone, bankAccount, paymentMethods, carriers, defaultCarrier } =
+  const { commissionRate, promptPayPhone, bankAccount, paymentMethods, carriers, defaultCarrier, massShipEnabled } =
     req.body ?? {}
   if (commissionRate !== undefined) {
     const rate = Number(commissionRate)
@@ -221,6 +222,9 @@ router.put('/settings', requireRole('admin'), (req, res) => {
   }
   if (req.body?.codMaxAmount !== undefined) {
     db.settings.codMaxAmount = Math.max(0, Number(req.body.codMaxAmount) || 0)
+  }
+  if (massShipEnabled !== undefined) {
+    db.settings.massShipEnabled = Boolean(massShipEnabled)
   }
   if (bankAccount) {
     db.settings.bankAccount = {

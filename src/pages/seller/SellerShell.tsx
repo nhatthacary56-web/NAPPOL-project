@@ -1,35 +1,39 @@
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
+import { useMassShipEnabled } from '../../hooks/useMassShipEnabled'
 import { useStore } from '../../store/StoreContext'
 import './SellerShell.css'
 
-const sideLinks = [
-  { to: '/seller', label: 'หน้าแรก', end: true },
-  { to: '/seller/tools', label: 'เครื่องมือ' },
-  { to: '/seller/products', label: 'สินค้า' },
-  { to: '/seller/orders', label: 'ออเดอร์', end: true },
-  { to: '/seller/orders/mass-ship', label: 'จัดส่งแบบชุด' },
-  { to: '/seller/vouchers', label: 'คูปองร้าน' },
-  { to: '/seller/returns', label: 'คืนสินค้า' },
-  { to: '/seller/wallet', label: 'การเงิน' },
-  { to: '/chats', label: 'แชท' },
-  { to: '/seller/shop', label: 'ตั้งค่าร้าน' },
-  { to: '/seller/me', label: 'ฉัน' },
-]
-
-const bottomLinks = [
-  { to: '/seller', label: 'หน้าแรก', end: true, icon: '🏠' },
-  { to: '/seller/tools', label: 'เครื่องมือ', icon: '🧰' },
-  { to: '/chats', label: 'แชท', icon: '💬', badge: true },
-  { to: '/seller/me', label: 'ฉัน', icon: '👤' },
-]
-
 export function SellerShell() {
   const { user, shop, unreadCount } = useStore()
+  const { massShipEnabled } = useMassShipEnabled()
 
   if (!user) return <Navigate to="/login" replace state={{ from: '/seller' }} />
   if (user.role !== 'seller' && user.role !== 'admin') {
     return <Navigate to="/register?role=seller" replace />
   }
+
+  const sideLinks = [
+    { to: '/seller', label: 'หน้าแรก', end: true },
+    { to: '/seller/tools', label: 'เครื่องมือ' },
+    { to: '/seller/products', label: 'สินค้า' },
+    { to: '/seller/orders', label: 'ออเดอร์', end: true },
+    ...(massShipEnabled
+      ? [{ to: '/seller/orders/mass-ship', label: 'จัดส่งแบบชุด' }]
+      : []),
+    { to: '/seller/vouchers', label: 'คูปองร้าน' },
+    { to: '/seller/returns', label: 'คืนสินค้า' },
+    { to: '/seller/wallet', label: 'การเงิน' },
+    { to: '/chats', label: 'แชท' },
+    { to: '/seller/shop', label: 'ตั้งค่าร้าน' },
+    { to: '/seller/me', label: 'ฉัน' },
+  ]
+
+  const bottomLinks = [
+    { to: '/seller', label: 'หน้าแรก', end: true, icon: '🏠' },
+    { to: '/seller/tools', label: 'เครื่องมือ', icon: '🧰' },
+    { to: '/chats', label: 'แชท', icon: '💬', badge: true },
+    { to: '/seller/me', label: 'ฉัน', icon: '👤' },
+  ]
 
   return (
     <div className="seller-shell">

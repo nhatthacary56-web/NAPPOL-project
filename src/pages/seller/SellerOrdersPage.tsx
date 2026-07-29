@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatPrice } from '../../data/catalog'
 import { metaApi, orderApi } from '../../api'
+import { useMassShipEnabled } from '../../hooks/useMassShipEnabled'
 import { statusLabel, useStore } from '../../store/StoreContext'
 import { useToast } from '../../store/ToastContext'
 import type { ApiOrder, OrderStatus } from '../../api/types'
@@ -35,6 +36,7 @@ function fulfillmentLabel(order: ApiOrder) {
 export function SellerOrdersPage() {
   const { orders, updateOrderStatus, refreshOrders } = useStore()
   const { toast } = useToast()
+  const { massShipEnabled } = useMassShipEnabled()
   const [searchParams, setSearchParams] = useSearchParams()
   const statusFilter = (searchParams.get('status') || '') as '' | OrderStatus | 'cancelled'
   const [shipOrderId, setShipOrderId] = useState<string | null>(null)
@@ -167,9 +169,11 @@ export function SellerOrdersPage() {
             {zortReady ? ' · ZORT พร้อมใช้' : ' · ยังไม่ได้ตั้งค่า ZORT'}
           </p>
         </div>
-        <Link className="seller-btn" to="/seller/orders/mass-ship">
-          จัดส่งแบบชุด
-        </Link>
+        {massShipEnabled ? (
+          <Link className="seller-btn" to="/seller/orders/mass-ship">
+            จัดส่งแบบชุด
+          </Link>
+        ) : null}
       </div>
 
       <div className="seller-tabs" role="tablist" aria-label="กรองสถานะออเดอร์">

@@ -262,6 +262,8 @@ export type PlatformSettings = {
   codMaxAmount?: number
   carriers?: string[]
   defaultCarrier?: string
+  /** เปิดเครื่องมือจัดส่งแบบชุดให้ร้าน (ค่าเริ่มต้น true) */
+  massShipEnabled?: boolean
 }
 
 export type AppContent = {
