@@ -20,8 +20,8 @@ import {
   sendBoostOtpSms,
   getBoostSmsPublicStatus,
   getBoostSmsConfigError,
-  verifyBoostOtp,
 } from '../boostSms.js'
+import { setMemOtp, consumeMemOtp, clearMemOtp, peekMemOtp } from '../otpMem.js'
 
 const router = Router()
 
@@ -371,37 +371,43 @@ router.post('/otp/request', otpRequestLimiter, async (req, res) => {
   }
 
   const code = providers.demoOtp ? '123456' : String(Math.floor(100000 + Math.random() * 900000))
-  let channel = providers.demoOtp ? 'demo' : 'sms'
+  const ttlMs = 15 * 60 * 1000
   db.otpCodes = db.otpCodes.filter((o) => o.phone !== phone)
   db.otpCodes.push({
     phone,
     code,
-    expiresAt: Date.now() + 10 * 60 * 1000,
-    channel,
+    expiresAt: Date.now() + ttlMs,
+    channel: providers.demoOtp ? 'demo' : 'sms',
   })
+  setMemOtp(phone, code, { ttlMs, channel: providers.demoOtp ? 'demo' : 'sms' })
   await flushPersist()
 
   if (!providers.demoOtp) {
     const configError = getBoostSmsConfigError()
     if (configError) {
       db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
+      clearMemOtp(phone)
       await flushPersist()
       return res.status(400).json({ ok: false, message: configError })
     }
     try {
       const brand =
         String(process.env.SMS_BRAND_NAME || process.env.BRAND_NAME || 'DeeJa').trim() || 'DeeJa'
-      const sent = await sendBoostOtpSms(phone, code, brand)
-      channel = sent?.channel || 'sms'
+      await sendBoostOtpSms(phone, code, brand)
+      // เก็บรหัสเดิมอีกครั้งหลังส่งสำเร็จ (กันถูก overwrite)
+      setMemOtp(phone, code, { ttlMs, channel: 'sms' })
       const entry = (db.otpCodes || []).find((o) => o.phone === phone)
       if (entry) {
-        entry.channel = channel
-        // ถ้า BoostSMS เจนรหัสเอง อย่าใช้รหัสในเครื่องเราเป็นตัวตัดสินอย่างเดียว
-        if (channel === 'boost_otp') entry.code = null
+        entry.code = code
+        entry.channel = 'sms'
+        entry.expiresAt = Date.now() + ttlMs
+      } else {
+        db.otpCodes.push({ phone, code, expiresAt: Date.now() + ttlMs, channel: 'sms' })
       }
       await flushPersist()
     } catch (error) {
       db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
+      clearMemOtp(phone)
       await flushPersist()
       console.error('[boost-sms] send failed:', error.message || error, error.detail || '')
       const configHint = getBoostSmsConfigError()
@@ -410,7 +416,7 @@ router.post('/otp/request', otpRequestLimiter, async (req, res) => {
         message: configHint
           ? configHint
           : error.status === 401
-            ? 'API Key ของ BoostSMS ไม่ถูกต้อง — ตรวจ BOOST_SMS_API_KEY ต้องเป็น Secret Key (sk_live_...) ไม่ใช่ Key ID และไม่ใส่ในช่อง SENDER'
+            ? 'API Key ของ BoostSMS ไม่ถูกต้อง — ตรวจ BOOST_SMS_API_KEY ต้องเป็น Secret Key (sk_live_...)'
             : error.status === 429
               ? 'ขอ OTP บ่อยเกินไปจากผู้ให้บริการ SMS — รอสักครู่แล้วลองใหม่'
               : `ส่ง SMS ไม่สำเร็จ: ${error.message || 'ลองใหม่ภายหลัง'}`,
@@ -425,9 +431,22 @@ router.post('/otp/request', otpRequestLimiter, async (req, res) => {
       : `ส่งรหัส OTP ทาง SMS ไปที่ ${phone} แล้ว`,
     demoCode: providers.demoOtp ? code : undefined,
     sms: !providers.demoOtp,
-    expiresInSec: 600,
+    expiresInSec: Math.floor(ttlMs / 1000),
   })
 })
+
+function matchStoredOtp(phone, code) {
+  const got = String(code || '').replace(/\D/g, '')
+  if (!got) return false
+  if (consumeMemOtp(phone, got)) return true
+  const db = getDb()
+  const entry = (db.otpCodes || []).find((o) => o.phone === phone)
+  if (!entry || !entry.code || entry.expiresAt < Date.now()) return false
+  if (String(entry.code).replace(/\D/g, '') !== got) return false
+  db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
+  clearMemOtp(phone)
+  return true
+}
 
 router.post('/otp/verify', otpVerifyLimiter, async (req, res) => {
   const phone = normalizePhone(req.body?.phone)
@@ -435,30 +454,20 @@ router.post('/otp/verify', otpVerifyLimiter, async (req, res) => {
   if (!phone || !code) {
     return res.status(400).json({ ok: false, message: 'กรอกเบอร์และรหัส OTP' })
   }
-  const db = getDb()
-  const entry = (db.otpCodes || []).find((o) => o.phone === phone)
-  const notExpired = entry && entry.expiresAt >= Date.now()
-  const localOk =
-    notExpired &&
-    entry.code &&
-    String(entry.code).replace(/\D/g, '') === code &&
-    entry.channel !== 'boost_otp'
 
-  let boostOk = false
-  if (!localOk && isBoostSmsConfigured()) {
-    try {
-      await verifyBoostOtp(phone, code)
-      boostOk = true
-    } catch (error) {
-      console.error('[boost-sms] verify failed:', error.message || error)
-    }
+  if (!matchStoredOtp(phone, code)) {
+    const still = peekMemOtp(phone)
+    const dbEntry = (getDb().otpCodes || []).find((o) => o.phone === phone)
+    console.error('[otp/verify] mismatch', {
+      phone,
+      hasMem: Boolean(still),
+      hasDb: Boolean(dbEntry),
+      memExp: still?.expiresAt || null,
+      dbExp: dbEntry?.expiresAt || null,
+    })
+    return res.status(401).json({ ok: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ — กดขอรหัสใหม่แล้วใช้รหัสจากข้อความล่าสุดเท่านั้น' })
   }
 
-  if (!localOk && !boostOk) {
-    return res.status(401).json({ ok: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' })
-  }
-
-  db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
   const user = ensureBuyerByPhone(phone, req.body?.name)
   const blocked = blockedAccountMessage(user)
   if (blocked) return res.status(403).json({ ok: false, message: blocked })
@@ -704,33 +713,16 @@ router.post('/link/phone', requireAuth, async (req, res) => {
   if (!phone || !code) {
     return res.status(400).json({ ok: false, message: 'กรอกเบอร์และรหัส OTP' })
   }
-  const db = getDb()
-  const entry = (db.otpCodes || []).find((o) => o.phone === phone)
-  const notExpired = entry && entry.expiresAt >= Date.now()
-  const localOk =
-    notExpired &&
-    entry.code &&
-    String(entry.code).replace(/\D/g, '') === code &&
-    entry.channel !== 'boost_otp'
-
-  let boostOk = false
-  if (!localOk && isBoostSmsConfigured()) {
-    try {
-      await verifyBoostOtp(phone, code)
-      boostOk = true
-    } catch (error) {
-      console.error('[boost-sms] link verify failed:', error.message || error)
-    }
-  }
-
-  if (!localOk && !boostOk) {
-    return res.status(401).json({ ok: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' })
+  if (!matchStoredOtp(phone, code)) {
+    return res.status(401).json({
+      ok: false,
+      message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ — กดขอรหัสใหม่แล้วใช้รหัสจากข้อความล่าสุดเท่านั้น',
+    })
   }
   const taken = findUserByPhone(phone)
   if (taken && taken.id !== user.id) {
     return res.status(409).json({ ok: false, message: 'เบอร์นี้ถูกใช้กับบัญชีอื่นแล้ว' })
   }
-  db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
   user.phone = phone
   await flushPersist()
   res.json({ ok: true, user: publicUser(user), message: 'เชื่อมเบอร์โทรสำเร็จ' })

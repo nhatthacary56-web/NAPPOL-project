@@ -35,7 +35,7 @@ export function getBoostSmsConfigError() {
     return 'BOOST_SMS_API_KEY ควรเป็น Secret Key รูปแบบ sk_live_...'
   }
   if (looksLikeSecretKey(sender)) {
-    return 'ใส่ Secret Key ผิดช่องที่ BOOST_SMS_SENDER — ช่องนี้ต้องเป็นชื่อผู้ส่งที่อนุมัติใน BoostSMS (เช่น DeeJa) ไม่ใช่ sk_live_...'
+    return 'ใส่ Secret Key ผิดช่องที่ BOOST_SMS_SENDER — ช่องนี้ต้องเป็นชื่อผู้ส่งที่อนุมัติใน BoostSMS ไม่ใช่ sk_live_...'
   }
   if (!sender) {
     return 'ยังไม่ได้ตั้ง BOOST_SMS_SENDER (ชื่อผู้ส่งที่อนุมัติแล้ว)'
@@ -62,7 +62,7 @@ function senderName() {
   return raw
 }
 
-/** แปลงเป็น 08xxxxxxxx */
+/** 08xxxxxxxx */
 export function phoneForBoostSms(phone) {
   const digits = String(phone || '').replace(/\D/g, '')
   if (!digits) return ''
@@ -126,67 +126,23 @@ export async function sendBoostSms({ recipient, message, sender }) {
     err.code = 'BAD_PHONE'
     throw err
   }
-  const payload = {
-    recipient: to,
-    message: String(message || '').trim(),
-    senderName: String(sender || senderName()).trim(),
-  }
-  return boostFetch('/api/v1/sms/send', { method: 'POST', body: payload })
+  return boostFetch('/api/v1/sms/send', {
+    method: 'POST',
+    body: {
+      recipient: to,
+      message: String(message || '').trim(),
+      senderName: String(sender || senderName()).trim(),
+    },
+  })
 }
 
 /**
- * ส่ง OTP — ใช้ BoostSMS /otp/send เป็นหลัก (รหัสบนมือถือ = รหัสที่ verify ได้)
- * ถ้าไม่สำเร็จ ค่อยส่งข้อความเองด้วยรหัสที่เราสร้าง
+ * ส่งเฉพาะ SMS ธรรมดาที่มีรหัสที่เราสร้างเอง
+ * ไม่ใช้ /otp/send ของ BoostSMS (จะได้รหัสคนละตัวกับที่เซิร์ฟเวอร์จำไว้)
  */
 export async function sendBoostOtpSms(phone, code, brand = 'DeeJa') {
-  const to = phoneForBoostSms(phone)
-  try {
-    await boostFetch('/api/v1/otp/send', {
-      method: 'POST',
-      body: {
-        recipient: to,
-        phone: to,
-        senderName: senderName(),
-      },
-    })
-    return { channel: 'boost_otp' }
-  } catch (otpErr) {
-    if (otpErr.code === 'BAD_CONFIG' || otpErr.code === 'NO_KEY') throw otpErr
-    const message = `${brand}: รหัส OTP ของคุณคือ ${code} ใช้ได้ 5 นาที ห้ามบอกผู้อื่น`
-    await sendBoostSms({ recipient: phone, message })
-    return { channel: 'sms' }
-  }
-}
-
-/** ยืนยันรหัสกับ BoostSMS โดยตรง */
-export async function verifyBoostOtp(phone, code) {
-  const to = phoneForBoostSms(phone)
   const otp = String(code || '').replace(/\D/g, '')
-  if (!to || !otp) {
-    const err = new Error('เบอร์หรือรหัสไม่ครบ')
-    err.status = 400
-    throw err
-  }
-  const attempts = [
-    { recipient: to, code: otp },
-    { phone: to, code: otp },
-    { recipient: to, otp },
-    { phone: to, otp },
-  ]
-  let lastErr = null
-  for (const body of attempts) {
-    try {
-      return await boostFetch('/api/v1/otp/verify', { method: 'POST', body })
-    } catch (error) {
-      lastErr = error
-      if (error.status === 401 || error.status === 403) continue
-      if (error.status === 400) continue
-      throw error
-    }
-  }
-  throw lastErr || new Error('ยืนยัน OTP กับ BoostSMS ไม่สำเร็จ')
-}
-
-export async function getBoostBalance() {
-  return boostFetch('/api/v1/balance')
+  const message = `${brand} OTP: ${otp} (ใช้ได้ 15 นาที) ห้ามบอกผู้อื่น`
+  await sendBoostSms({ recipient: phone, message })
+  return { channel: 'sms' }
 }
