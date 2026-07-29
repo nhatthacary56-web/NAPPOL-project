@@ -77,6 +77,7 @@ export function SettingsPage() {
           lineRedirectUri: null,
           demoOtp: true,
           demoSocial: true,
+          smsReady: false,
         }),
       )
   }, [])

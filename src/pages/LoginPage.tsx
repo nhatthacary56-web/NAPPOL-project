@@ -72,6 +72,7 @@ export function LoginPage() {
           lineRedirectUri: null,
           demoOtp: true,
           demoSocial: true,
+          smsReady: false,
         }),
       )
   }, [])

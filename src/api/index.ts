@@ -58,10 +58,11 @@ export const authApi = {
         lineReady?: boolean
         demoOtp: boolean
         demoSocial: boolean
+        smsReady?: boolean
       }
     }>('/auth/providers'),
   requestOtp: (phone: string) =>
-    api<{ ok: true; message: string; demoCode?: string; expiresInSec: number }>(
+    api<{ ok: true; message: string; demoCode?: string; expiresInSec: number; sms?: boolean }>(
       '/auth/otp/request',
       { method: 'POST', json: { phone } },
     ),
