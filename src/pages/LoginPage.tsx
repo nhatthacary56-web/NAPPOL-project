@@ -213,8 +213,11 @@ export function LoginPage() {
           ) : (
             <form className="auth-form" onSubmit={onVerifyOtp}>
               <p className="auth-page__hint" style={{ textAlign: 'left', margin: 0 }}>
-                ยังไม่ส่ง SMS จริง (ประหยัดต้นทุน) · รหัสยืนยันในแอปสำหรับเบอร์ {phone}
-                {providers?.demoOtp ? ' · ทดลองใช้ 123456' : ''}
+                {providers?.smsReady && !providers?.demoOtp
+                  ? `ส่งรหัส OTP ทาง SMS ไปที่ ${phone} แล้ว ตรวจสอบข้อความบนมือถือ`
+                  : providers?.demoOtp
+                    ? `โหมดทดลอง · ใช้รหัส 123456 สำหรับเบอร์ ${phone}`
+                    : `รอรหัส OTP สำหรับเบอร์ ${phone}`}
               </p>
               <label>
                 รหัส OTP

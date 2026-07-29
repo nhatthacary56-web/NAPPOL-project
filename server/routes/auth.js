@@ -14,6 +14,7 @@ import {
 } from '../db.js'
 import { signToken, requireAuth } from '../auth.js'
 import { createRateLimiter } from '../rateLimit.js'
+import { isBoostSmsConfigured, sendBoostOtpSms } from '../boostSms.js'
 
 const router = Router()
 
@@ -38,6 +39,11 @@ const otpVerifyLimiter = createRateLimiter({
 const GENERIC_LOGIN_FAIL = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
 
 function authProviders() {
+  const smsReady = isBoostSmsConfigured()
+  const forceDemo = process.env.AUTH_DEMO_OTP === '1'
+  // มีคีย์ SMS แล้ว → ส่งจริง (ยกเว้นบังคับโหมดทดลอง AUTH_DEMO_OTP=1)
+  // ไม่มีคีย์ → โหมดทดลองจนกว่าจะตั้ง AUTH_DEMO_OTP=0
+  const demoOtp = forceDemo || (!smsReady && process.env.AUTH_DEMO_OTP !== '0')
   return {
     googleClientId: String(process.env.GOOGLE_CLIENT_ID || '').trim() || null,
     lineChannelId: String(process.env.LINE_CHANNEL_ID || '').trim() || null,
@@ -47,8 +53,9 @@ function authProviders() {
       (process.env.PUBLIC_APP_URL
         ? `${String(process.env.PUBLIC_APP_URL).replace(/\/$/, '')}/login/line/callback`
         : null),
-    demoOtp: process.env.AUTH_DEMO_OTP !== '0',
+    demoOtp,
     demoSocial: process.env.AUTH_DEMO_SOCIAL !== '0',
+    smsReady,
   }
 }
 
@@ -239,6 +246,7 @@ router.get('/providers', (_req, res) => {
       lineReady,
       demoOtp: p.demoOtp,
       demoSocial: p.demoSocial && !p.googleClientId && !lineReady,
+      smsReady: p.smsReady,
     },
   })
 })
@@ -317,28 +325,60 @@ router.post('/admin-login', authLoginLimiter, (req, res) => {
   res.json({ ...issueSession(user), message: 'เข้าสู่ระบบแอดมินสำเร็จ' })
 })
 
-router.post('/otp/request', otpRequestLimiter, (req, res) => {
+router.post('/otp/request', otpRequestLimiter, async (req, res) => {
   const phone = normalizePhone(req.body?.phone)
   if (!phone || phone.length < 9) {
     return res.status(400).json({ ok: false, message: 'กรอกเบอร์โทรให้ถูกต้อง' })
   }
+  const providers = authProviders()
   const db = getDb()
   if (!Array.isArray(db.otpCodes)) db.otpCodes = []
-  const demo = authProviders().demoOtp
-  const code = demo ? '123456' : String(Math.floor(100000 + Math.random() * 900000))
+
+  if (!providers.demoOtp && !providers.smsReady) {
+    return res.status(503).json({
+      ok: false,
+      message: 'ยังไม่ได้ตั้งค่า SMS บนเซิร์ฟเวอร์ (BOOST_SMS_API_KEY)',
+    })
+  }
+
+  const code = providers.demoOtp ? '123456' : String(Math.floor(100000 + Math.random() * 900000))
   db.otpCodes = db.otpCodes.filter((o) => o.phone !== phone)
   db.otpCodes.push({
     phone,
     code,
     expiresAt: Date.now() + 5 * 60 * 1000,
+    channel: providers.demoOtp ? 'demo' : 'sms',
   })
   persist()
 
-  // Real SMS gateway can plug in here later.
+  if (!providers.demoOtp) {
+    try {
+      const brand =
+        String(process.env.SMS_BRAND_NAME || process.env.BRAND_NAME || 'DeeJa').trim() || 'DeeJa'
+      await sendBoostOtpSms(phone, code, brand)
+    } catch (error) {
+      db.otpCodes = (db.otpCodes || []).filter((o) => o.phone !== phone)
+      persist()
+      console.error('[boost-sms] send failed:', error.message || error, error.detail || '')
+      return res.status(502).json({
+        ok: false,
+        message:
+          error.status === 401
+            ? 'API Key ของ BoostSMS ไม่ถูกต้อง'
+            : error.status === 429
+              ? 'ขอ OTP บ่อยเกินไปจากผู้ให้บริการ SMS — รอสักครู่แล้วลองใหม่'
+              : `ส่ง SMS ไม่สำเร็จ: ${error.message || 'ลองใหม่ภายหลัง'}`,
+      })
+    }
+  }
+
   res.json({
     ok: true,
-    message: demo ? 'ส่งรหัสแล้ว (โหมดทดลองใช้ 123456)' : 'ส่งรหัส OTP แล้ว',
-    demoCode: demo ? code : undefined,
+    message: providers.demoOtp
+      ? 'ส่งรหัสแล้ว (โหมดทดลองใช้ 123456)'
+      : `ส่งรหัส OTP ทาง SMS ไปที่ ${phone} แล้ว`,
+    demoCode: providers.demoOtp ? code : undefined,
+    sms: !providers.demoOtp,
     expiresInSec: 300,
   })
 })
