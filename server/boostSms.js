@@ -124,7 +124,12 @@ export async function listBoostSendersDetailed() {
     try {
       const json = await boostFetch(path, { method: 'GET', skipConfigCheck: true })
       const names = extractSenderNames(json)
-      tried.push({ path, ok: true, names, sampleKeys: json && typeof json === 'object' ? Object.keys(json).slice(0, 12) : [] })
+      tried.push({
+        path,
+        ok: true,
+        names,
+        sampleKeys: json && typeof json === 'object' ? Object.keys(json).slice(0, 12) : [],
+      })
       if (names.length) return { names, tried, rawKeys: tried[tried.length - 1].sampleKeys }
     } catch (error) {
       tried.push({ path, ok: false, error: error.message || String(error), status: error.status || null })
@@ -141,15 +146,16 @@ export async function listBoostSenders() {
 export async function resolveSenderName() {
   const preferred = senderNameRaw()
   const approved = await listBoostSenders()
+  // ถ้า env ไม่ตรงรายการที่อนุมัติ — อย่าใช้ (เช่น ค่า BoostSMS)
   if (preferred && !looksLikeSecretKey(preferred)) {
-    if (
-      approved.length === 0 ||
-      approved.some((s) => s.toLowerCase() === preferred.toLowerCase())
-    ) {
-      return preferred
-    }
+    const hit = approved.find((s) => s.toLowerCase() === preferred.toLowerCase())
+    if (hit) return hit
   }
-  if (approved.length > 0) return approved[0]
+  if (approved.length > 0) {
+    // ชอบชื่อจริงมากกว่า Trial
+    const nonTrial = approved.find((s) => !/^trial$/i.test(s))
+    return nonTrial || approved[0]
+  }
   return preferred && !looksLikeSecretKey(preferred) ? preferred : ''
 }
 
@@ -159,7 +165,7 @@ export async function getBoostSmsPublicStatus() {
   const configError = getBoostSmsConfigError()
   let approvedSenders = []
   let sendersProbe = null
-  let resolvedSender = sender || null
+  let resolvedSender = null
   if (key && !configError) {
     const detailed = await listBoostSendersDetailed()
     approvedSenders = detailed.names
@@ -180,8 +186,15 @@ export async function getBoostSmsPublicStatus() {
     nextStep:
       approvedSenders.length === 0
         ? 'ไปที่ BoostSMS → Senders สร้าง/รออนุมัติชื่อผู้ส่ง แล้วใส่ BOOST_SMS_SENDER ให้ตรงชื่อนั้นบน Render'
-        : null,
+        : preferredSenderHint(sender, resolvedSender),
   }
+}
+
+function preferredSenderHint(envSender, resolved) {
+  if (envSender && resolved && envSender.toLowerCase() !== resolved.toLowerCase()) {
+    return `BOOST_SMS_SENDER=${envSender} ไม่ตรงรายการอนุมัติ — ระบบใช้ ${resolved} แทน (แนะนำตั้งเป็น ${resolved})`
+  }
+  return null
 }
 
 /** 08xxxxxxxx */
@@ -194,7 +207,7 @@ export function phoneForBoostSms(phone) {
   return digits
 }
 
-function pickReturnedOtp(payload, fallback) {
+function pickReturnedOtp(payload) {
   const candidates = [
     payload?.otp,
     payload?.code,
@@ -207,7 +220,31 @@ function pickReturnedOtp(payload, fallback) {
     const digits = String(c || '').replace(/\D/g, '')
     if (digits.length >= 4 && digits.length <= 8) return digits
   }
-  return String(fallback || '').replace(/\D/g, '')
+  return null
+}
+
+function pickRef(payload) {
+  const candidates = [
+    payload?.ref,
+    payload?.id,
+    payload?.otpId,
+    payload?.otp_id,
+    payload?.sessionId,
+    payload?.session_id,
+    payload?.requestId,
+    payload?.request_id,
+    payload?.data?.ref,
+    payload?.data?.id,
+    payload?.data?.otpId,
+    payload?.data?.otp_id,
+    payload?.data?.sessionId,
+    payload?.result?.id,
+    payload?.result?.ref,
+  ]
+  for (const c of candidates) {
+    if (c != null && String(c).trim()) return String(c).trim()
+  }
+  return null
 }
 
 export async function sendBoostSms({ recipient, message, sender }) {
@@ -220,7 +257,7 @@ export async function sendBoostSms({ recipient, message, sender }) {
   const senderName = String(sender || (await resolveSenderName()) || '').trim()
   if (!senderName) {
     const err = new Error(
-      'ยังไม่มีชื่อผู้ส่งที่อนุมัติ — ไป BoostSMS เมนู Senders สร้างชื่อผู้ส่ง รออนุมัติ แล้วใส่ BOOST_SMS_SENDER บน Render',
+      'ยังไม่มีชื่อผู้ส่งที่อนุมัติ — ตั้ง BOOST_SMS_SENDER เป็นชื่อจาก BoostSMS → Senders เช่น DeeJa',
     )
     err.code = 'NO_SENDER'
     err.status = 400
@@ -238,46 +275,107 @@ export async function sendBoostSms({ recipient, message, sender }) {
 }
 
 /**
- * ส่ง OTP:
- * 1) ถ้ามี sender ที่อนุมัติ → sms/send พร้อมรหัสของเรา
- * 2) ถ้ายังไม่มี sender → ใช้ /otp/send (มักใช้ sender ระบบ) แล้วจำรหัสที่เราส่ง/ที่ API คืน
+ * ส่ง OTP ด้วย BoostSMS /otp/send เป็นหลัก (รหัสบนมือถือ = รหัสที่ /otp/verify ตรวจ)
+ * เก็บ ref จาก response ไว้ยืนยันคู่กัน
  */
-export async function sendBoostOtpSms(phone, code, brand = 'DeeJa') {
-  const otp = String(code || '').replace(/\D/g, '')
+export async function sendBoostOtpSms(phone, _ignoredLocalCode, brand = 'DeeJa') {
   const to = phoneForBoostSms(phone)
-  const message = `${brand} OTP: ${otp} (ใช้ได้ 15 นาที) ห้ามบอกผู้อื่น`
   const sender = await resolveSenderName()
-
-  if (sender) {
-    try {
-      await sendBoostSms({ recipient: phone, message, sender })
-      return { channel: 'sms', code: otp, sender }
-    } catch (error) {
-      // ถ้า sender ยังไม่อนุมัติ ให้ลอง otp/send ต่อ
-      if (!/sender|ผู้ส่ง|อนุมัติ|approved|NO_SENDER/i.test(String(error.message || ''))) {
-        throw error
-      }
-    }
+  if (!sender) {
+    const err = new Error(
+      'ยังไม่มีชื่อผู้ส่งที่อนุมัติ — ตั้ง BOOST_SMS_SENDER=DeeJa (หรือชื่อที่อนุมัติแล้ว)',
+    )
+    err.code = 'NO_SENDER'
+    err.status = 400
+    throw err
   }
 
-  const bodyAttempts = [
-    { recipient: to, phone: to, otp, code: otp, message, senderName: sender || undefined },
-    { recipient: to, otp, message },
-    { phone: to, code: otp },
-    { recipient: to },
+  const sendBodies = [
+    { recipient: to, senderName: sender },
+    { phone: to, senderName: sender },
+    { recipient: to, phone: to, senderName: sender },
+    { recipient: to, sender: sender },
   ]
 
+  let sendRes = null
   let lastErr = null
-  for (const body of bodyAttempts) {
-    const clean = Object.fromEntries(Object.entries(body).filter(([, v]) => v != null && v !== ''))
+  for (const body of sendBodies) {
     try {
-      const res = await boostFetch('/api/v1/otp/send', { method: 'POST', body: clean })
-      const finalCode = pickReturnedOtp(res, otp)
-      return { channel: 'boost_otp', code: finalCode, sender: sender || null, raw: res }
+      sendRes = await boostFetch('/api/v1/otp/send', { method: 'POST', body })
+      break
     } catch (error) {
       lastErr = error
     }
   }
 
-  throw lastErr || new Error('ส่ง OTP ไม่สำเร็จ')
+  // fallback: sms/send ด้วยรหัสที่เราสร้าง — verify ฝั่งเรา
+  if (!sendRes) {
+    const localCode = String(Math.floor(100000 + Math.random() * 900000))
+    const message = `${brand} OTP: ${localCode} (ใช้ได้ 15 นาที) ห้ามบอกผู้อื่น`
+    try {
+      await sendBoostSms({ recipient: phone, message, sender })
+      return {
+        channel: 'sms',
+        code: localCode,
+        ref: null,
+        phone: to,
+        sender,
+      }
+    } catch (smsErr) {
+      throw lastErr || smsErr
+    }
+  }
+
+  return {
+    channel: 'boost_otp',
+    code: pickReturnedOtp(sendRes), // อาจเป็น null — ต้อง verify ผ่าน BoostSMS
+    ref: pickRef(sendRes),
+    phone: to,
+    sender,
+    raw: sendRes,
+  }
+}
+
+/** ยืนยัน OTP กับ BoostSMS ให้ตรงกับตอน /otp/send */
+export async function verifyBoostOtp(phone, code, ref = null) {
+  const to = phoneForBoostSms(phone)
+  const otp = String(code || '').replace(/\D/g, '')
+  if (!to || !otp) {
+    const err = new Error('เบอร์หรือรหัสไม่ครบ')
+    err.status = 400
+    throw err
+  }
+
+  const attempts = []
+  const base = [
+    { recipient: to, code: otp },
+    { phone: to, code: otp },
+    { recipient: to, otp },
+    { phone: to, otp },
+    { recipient: to, phone: to, code: otp },
+    { recipient: to, phone: to, otp },
+  ]
+  for (const b of base) {
+    attempts.push(b)
+    if (ref) {
+      attempts.push({ ...b, ref })
+      attempts.push({ ...b, otpId: ref })
+      attempts.push({ ...b, otp_id: ref })
+      attempts.push({ ...b, sessionId: ref })
+      attempts.push({ ...b, id: ref })
+      attempts.push({ ...b, requestId: ref })
+    }
+  }
+
+  let lastErr = null
+  for (const body of attempts) {
+    try {
+      return await boostFetch('/api/v1/otp/verify', { method: 'POST', body })
+    } catch (error) {
+      lastErr = error
+      // ลอง body ถัดไปเมื่อ 400/401/404
+      if (![400, 401, 403, 404, 422].includes(Number(error.status))) throw error
+    }
+  }
+  throw lastErr || new Error('ยืนยัน OTP กับ BoostSMS ไม่สำเร็จ')
 }
