@@ -660,8 +660,38 @@ router.post('/oauth/line', async (req, res) => {
   }
 })
 
+router.post('/become-seller', requireAuth, (req, res) => {
+  const db = getDb()
+  const user = db.users.find((u) => u.id === req.user.id)
+  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
+  if (user.deletedAt) {
+    return res.status(403).json({ ok: false, message: 'บัญชีนี้ถูกลบแล้ว' })
+  }
+  if (user.banned) {
+    return res.status(403).json({ ok: false, message: 'บัญชีถูกระงับ' })
+  }
+
+  // บัญชีเดิม (ลูกค้า / OTP / Google) อัปเกรดเป็นผู้ขาย — ไม่ต้องสมัครใหม่
+  if (user.role === 'buyer') {
+    user.role = 'seller'
+    persist()
+  }
+
+  const shop = getShopByOwner(user.id) ?? null
+  res.json({
+    ...issueSession(user),
+    shop,
+    message:
+      user.role === 'admin'
+        ? 'บัญชีแอดมินพร้อมจัดการร้าน'
+        : shop
+          ? 'เข้าศูนย์ผู้ขายได้แล้ว'
+          : 'พร้อมเปิดร้านด้วยบัญชีเดิม — กรอกข้อมูลร้านได้เลย',
+  })
+})
+
 router.get('/me', requireAuth, (req, res) => {
-  const shop = req.user.role === 'seller' ? getShopByOwner(req.user.id) : null
+  const shop = getShopByOwner(req.user.id) ?? null
   res.json({ ok: true, user: req.user, shop })
 })
 

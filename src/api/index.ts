@@ -82,6 +82,11 @@ export const authApi = {
       json: body,
     }),
   me: () => api<{ ok: true; user: ApiUser; shop: Shop | null }>('/auth/me'),
+  becomeSeller: () =>
+    api<{ ok: true; token: string; user: ApiUser; shop: Shop | null; message?: string }>(
+      '/auth/become-seller',
+      { method: 'POST' },
+    ),
   updateMe: (body: Partial<Pick<ApiUser, 'name' | 'phone'>>) =>
     api<{ ok: true; user: ApiUser }>('/auth/me', { method: 'PATCH', json: body }),
   linkGoogle: (body: { credential?: string; demoEmail?: string; demoName?: string }) =>

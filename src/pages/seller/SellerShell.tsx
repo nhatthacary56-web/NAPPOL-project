@@ -1,15 +1,57 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
 import { useMassShipEnabled } from '../../hooks/useMassShipEnabled'
 import { useStore } from '../../store/StoreContext'
+import { useToast } from '../../store/ToastContext'
 import './SellerShell.css'
 
 export function SellerShell() {
-  const { user, shop, unreadCount } = useStore()
+  const { user, shop, unreadCount, becomeSeller, bootstrapping } = useStore()
   const { massShipEnabled } = useMassShipEnabled()
+  const { toast } = useToast()
+  const [upgrading, setUpgrading] = useState(false)
+  const [upgradeFailed, setUpgradeFailed] = useState(false)
+
+  useEffect(() => {
+    if (!user || user.role !== 'buyer' || upgrading || upgradeFailed) return
+    let cancelled = false
+    setUpgrading(true)
+    void becomeSeller().then((result) => {
+      if (cancelled) return
+      setUpgrading(false)
+      if (!result.ok) {
+        setUpgradeFailed(true)
+        toast(result.message)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user, becomeSeller, upgrading, upgradeFailed, toast])
+
+  if (bootstrapping) {
+    return (
+      <div className="seller-shell seller-shell--loading">
+        <p>กำลังโหลด...</p>
+      </div>
+    )
+  }
 
   if (!user) return <Navigate to="/login" replace state={{ from: '/seller' }} />
+
+  if (user.role === 'buyer' || upgrading) {
+    if (upgradeFailed) {
+      return <Navigate to="/account" replace />
+    }
+    return (
+      <div className="seller-shell seller-shell--loading">
+        <p>กำลังเตรียมศูนย์ผู้ขายด้วยบัญชีเดิม...</p>
+      </div>
+    )
+  }
+
   if (user.role !== 'seller' && user.role !== 'admin') {
-    return <Navigate to="/register?role=seller" replace />
+    return <Navigate to="/account" replace />
   }
 
   const sideLinks = [

@@ -37,9 +37,9 @@ export function AccountPage() {
       title: 'บริการ',
       items: [
         { label: 'ศูนย์ความช่วยเหลือ', to: '/help' },
-        ...(user?.role === 'seller' || user?.role === 'admin'
+        ...(user
           ? [{ label: shop ? 'แดชบอร์ดร้านค้า' : 'เปิดร้านขายของ', to: '/seller' }]
-          : [{ label: 'สมัครเป็นผู้ขาย', to: '/register?role=seller' }]),
+          : [{ label: 'เปิดร้านขายของ', to: '/login' }]),
         ...(user?.role === 'admin' ? [{ label: 'หลังบ้านแอดมิน', to: '/admin' }] : []),
       ],
     },

@@ -66,6 +66,7 @@ type StoreContextValue = {
     role?: 'buyer' | 'seller'
   }) => Promise<{ ok: boolean; message: string }>
   logout: () => void
+  becomeSeller: () => Promise<{ ok: boolean; message: string }>
   updateProfile: (payload: Partial<Pick<ApiUser, 'name' | 'phone'>>) => Promise<void>
   refreshSession: () => Promise<void>
 
@@ -517,6 +518,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setShop(null)
   }, [])
 
+  const becomeSeller = useCallback(async () => {
+    try {
+      const res = await authApi.becomeSeller()
+      setToken(res.token)
+      setUser(res.user)
+      setShop(res.shop ?? null)
+      return { ok: true, message: res.message || 'พร้อมเปิดร้านด้วยบัญชีเดิม' }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'อัปเกรดเป็นผู้ขายไม่สำเร็จ',
+      }
+    }
+  }, [])
+
   const updateProfile = useCallback(async (payload: Partial<Pick<ApiUser, 'name' | 'phone'>>) => {
     const res = await authApi.updateMe(payload)
     setUser(res.user)
@@ -943,6 +959,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       loginWithLine,
       register,
       logout,
+      becomeSeller,
       updateProfile,
       linkGoogle,
       unlinkGoogle,
@@ -1011,6 +1028,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       loginWithLine,
       register,
       logout,
+      becomeSeller,
       updateProfile,
       linkGoogle,
       unlinkGoogle,

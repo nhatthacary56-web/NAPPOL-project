@@ -122,17 +122,21 @@ router.get('/pending', requireRole('admin'), (_req, res) => {
   })
 })
 
-router.get('/mine', requireRole('seller', 'admin'), (req, res) => {
+router.get('/mine', requireAuth, (req, res) => {
+  if (req.user.role !== 'seller' && req.user.role !== 'admin' && req.user.role !== 'buyer') {
+    return res.status(403).json({ ok: false, message: 'ไม่มีสิทธิ์เข้าถึง' })
+  }
   const shop = getShopByOwner(req.user.id)
   if (shop && !Array.isArray(shop.shopCategories)) shop.shopCategories = []
   res.json({ ok: true, shop: shop ?? null })
 })
 
 router.post('/register', requireAuth, (req, res) => {
-  if (req.user.role !== 'seller' && req.user.role !== 'admin') {
+  // ลูกค้าที่ล็อกอินแล้วเปิดร้านด้วยบัญชีเดิมได้ — อัปเกรด role เป็น seller ด้านล่าง
+  if (req.user.role !== 'seller' && req.user.role !== 'admin' && req.user.role !== 'buyer') {
     return res.status(403).json({
       ok: false,
-      message: 'สมัครบัญชีผู้ขายก่อน แล้วค่อยเปิดร้าน',
+      message: 'กรุณาเข้าสู่ระบบก่อนเปิดร้าน',
     })
   }
 

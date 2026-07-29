@@ -335,7 +335,10 @@ export function LoginPage() {
           ยังไม่มีบัญชี? <Link to="/register">สมัครสมาชิก</Link>
         </p>
         <p className="auth-page__switch">
-          เป็นพ่อค้าแม่ค้า? <Link to="/register?role=seller">สมัครผู้ขาย</Link>
+          เป็นพ่อค้าแม่ค้า?{' '}
+          <Link to="/seller">เข้าสู่ระบบแล้วเปิดร้านด้วยบัญชีเดิม</Link>
+          {' · '}
+          <Link to="/register?role=seller">สมัครใหม่</Link>
         </p>
         <p className="auth-page__hint">{appContent.auth.loginHint}</p>
       </main>
