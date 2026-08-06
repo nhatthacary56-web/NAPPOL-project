@@ -11,6 +11,14 @@ export function apiUrl(path: string): string {
   return base ? `${base}${p}` : p
 }
 
+/** Absolute or same-origin media URL (uploads / external). */
+export function mediaUrl(url?: string | null): string {
+  const raw = String(url || '').trim()
+  if (!raw) return ''
+  if (/^https?:\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:')) return raw
+  return apiUrl(raw.startsWith('/') ? raw : `/${raw}`)
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }

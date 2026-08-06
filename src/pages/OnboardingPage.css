@@ -1,0 +1,22 @@
+.onboarding-page__optional {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.onboarding-page__avatar {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding-page__label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.onboarding-page .image-upload__preview {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+}

@@ -185,20 +185,32 @@ async function resolveLineIdentity(body) {
   throw Object.assign(new Error('LINE ยังไม่พร้อม'), { status: 400 })
 }
 
+function isDefaultDisplayName(name) {
+  const n = String(name || '').trim()
+  if (!n) return true
+  if (/^ผู้ใช้\s+\d+$/.test(n)) return true
+  if (/^(Google|LINE)\s+(User|Buyer)$/i.test(n)) return true
+  return false
+}
+
 function ensureBuyerByPhone(phone, name) {
   const db = getDb()
   const normalized = normalizePhone(phone)
   let user = findUserByPhone(normalized)
   if (user) return user
+  const displayName = String(name || '').trim() || `ผู้ใช้ ${normalized.slice(-4)}`
   user = {
     id: createId('u'),
-    name: name || `ผู้ใช้ ${normalized.slice(-4)}`,
+    name: displayName,
     email: `phone_${normalized}@users.great.app`,
     phone: normalized,
     passwordHash: bcrypt.hashSync(createId('tmp'), 8),
     role: 'buyer',
     coins: 100,
     authProvider: 'phone',
+    avatarUrl: '',
+    birthday: '',
+    profileCompleted: !isDefaultDisplayName(displayName),
     createdAt: new Date().toISOString(),
   }
   db.users.unshift(user)
@@ -216,15 +228,19 @@ function upsertSocialUser({ provider, providerId, email, name, phone }) {
   if (!user && email) user = findUserByEmail(email)
 
   if (!user) {
+    const displayName = name || (provider === 'google' ? 'Google User' : 'LINE User')
     user = {
       id: createId('u'),
-      name: name || (provider === 'google' ? 'Google User' : 'LINE User'),
+      name: displayName,
       email: email || `${provider}_${providerId}@users.great.app`,
       phone: phone || '',
       passwordHash: bcrypt.hashSync(createId('tmp'), 8),
       role: 'buyer',
       coins: 100,
       authProvider: provider,
+      avatarUrl: '',
+      birthday: '',
+      profileCompleted: !isDefaultDisplayName(displayName),
       createdAt: new Date().toISOString(),
     }
     db.users.unshift(user)
@@ -235,6 +251,9 @@ function upsertSocialUser({ provider, providerId, email, name, phone }) {
   if (name) user.name = name
   if (email && !user.email) user.email = email
   if (phone && !user.phone) user.phone = normalizePhone(phone)
+  if (user.profileCompleted == null) {
+    user.profileCompleted = !isDefaultDisplayName(user.name)
+  }
   persist()
   return user
 }
@@ -316,6 +335,9 @@ router.post('/register', (req, res) => {
     role: allowed,
     coins: allowed === 'buyer' ? 100 : 50,
     authProvider: 'email',
+    avatarUrl: '',
+    birthday: '',
+    profileCompleted: true,
     createdAt: new Date().toISOString(),
   }
   db.users.push(user)
@@ -699,8 +721,43 @@ router.patch('/me', requireAuth, (req, res) => {
   const db = getDb()
   const user = db.users.find((u) => u.id === req.user.id)
   if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' })
-  if (req.body.name) user.name = String(req.body.name).trim()
+
+  if (req.body.name != null) {
+    const nextName = String(req.body.name).trim()
+    if (nextName.length < 2) {
+      return res.status(400).json({ ok: false, message: 'ชื่อต้องมีอย่างน้อย 2 ตัวอักษร' })
+    }
+    if (nextName.length > 60) {
+      return res.status(400).json({ ok: false, message: 'ชื่อยาวเกินไป' })
+    }
+    user.name = nextName
+  }
   if (req.body.phone) user.phone = normalizePhone(req.body.phone)
+
+  if (req.body.birthday !== undefined) {
+    const birthday = String(req.body.birthday || '').trim()
+    if (birthday) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
+        return res.status(400).json({ ok: false, message: 'รูปแบบวันเกิดไม่ถูกต้อง' })
+      }
+      const d = new Date(`${birthday}T00:00:00`)
+      if (Number.isNaN(d.getTime()) || d > new Date()) {
+        return res.status(400).json({ ok: false, message: 'วันเกิดไม่ถูกต้อง' })
+      }
+      user.birthday = birthday
+    } else {
+      user.birthday = ''
+    }
+  }
+
+  if (req.body.avatarUrl !== undefined) {
+    user.avatarUrl = String(req.body.avatarUrl || '').trim().slice(0, 2000)
+  }
+
+  if (req.body.profileCompleted === true || !isDefaultDisplayName(user.name)) {
+    user.profileCompleted = true
+  }
+
   persist()
   res.json({ ok: true, user: publicUser(user) })
 })

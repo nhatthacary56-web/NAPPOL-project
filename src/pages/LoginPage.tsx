@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { authApi } from '../api'
 import { PageHeader } from '../components/layout/PageHeader'
+import { postLoginPath } from '../lib/profile'
 import { useCatalog } from '../store/CatalogContext'
 import { useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
@@ -93,7 +94,7 @@ export function LoginPage() {
             const result = await loginWithGoogle({ credential: response.credential })
             setBusy(false)
             toast(result.message)
-            if (result.ok) navigate(from, { replace: true })
+            if (result.ok) navigate(postLoginPath(result.user, from), { replace: true })
           })()
         },
       })
@@ -136,7 +137,7 @@ export function LoginPage() {
     const result = await loginWithPhone(phone, otp)
     setBusy(false)
     toast(result.message)
-    if (result.ok) navigate(from, { replace: true })
+    if (result.ok) navigate(postLoginPath(result.user, from), { replace: true })
   }
 
   async function onEmailLogin(event: FormEvent) {
@@ -145,7 +146,7 @@ export function LoginPage() {
     const result = await login(email, password)
     setBusy(false)
     toast(result.message)
-    if (result.ok) navigate(from, { replace: true })
+    if (result.ok) navigate(postLoginPath(result.user, from), { replace: true })
   }
 
   async function onDemoGoogle() {
@@ -156,7 +157,7 @@ export function LoginPage() {
     })
     setBusy(false)
     toast(result.message)
-    if (result.ok) navigate(from, { replace: true })
+    if (result.ok) navigate(postLoginPath(result.user, from), { replace: true })
   }
 
   function onLineLogin() {
@@ -181,7 +182,7 @@ export function LoginPage() {
     const result = await loginWithLine({ demoName: 'LINE Buyer' })
     setBusy(false)
     toast(result.message)
-    if (result.ok) navigate(from, { replace: true })
+    if (result.ok) navigate(postLoginPath(result.user, from), { replace: true })
   }
 
   return (

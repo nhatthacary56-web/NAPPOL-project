@@ -13,6 +13,12 @@ export type ApiUser = {
   googleLinked?: boolean
   lineLinked?: boolean
   authProvider?: string
+  /** รูปโปรไฟล์ (URL) */
+  avatarUrl?: string
+  /** วันเกิด YYYY-MM-DD */
+  birthday?: string
+  /** ตั้งชื่อ/โปรไฟล์ครบหลัง OTP แล้ว */
+  profileCompleted?: boolean
 }
 
 export type ShopCategory = {

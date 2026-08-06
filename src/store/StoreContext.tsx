@@ -45,29 +45,39 @@ type StoreContextValue = {
   user: ApiUser | null
   shop: Shop | null
   bootstrapping: boolean
-  login: (email: string, password: string) => Promise<{ ok: boolean; message: string }>
-  loginWithPhone: (phone: string, code: string) => Promise<{ ok: boolean; message: string }>
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<{ ok: boolean; message: string; user?: ApiUser }>
+  loginWithPhone: (
+    phone: string,
+    code: string,
+  ) => Promise<{ ok: boolean; message: string; user?: ApiUser }>
   requestPhoneOtp: (phone: string) => Promise<{ ok: boolean; message: string; demoCode?: string }>
   loginWithGoogle: (payload?: {
     credential?: string
     demoEmail?: string
     demoName?: string
-  }) => Promise<{ ok: boolean; message: string }>
+  }) => Promise<{ ok: boolean; message: string; user?: ApiUser }>
   loginWithLine: (payload?: {
     accessToken?: string
     code?: string
     demoName?: string
-  }) => Promise<{ ok: boolean; message: string }>
+  }) => Promise<{ ok: boolean; message: string; user?: ApiUser }>
   register: (payload: {
     name: string
     email: string
     phone: string
     password: string
     role?: 'buyer' | 'seller'
-  }) => Promise<{ ok: boolean; message: string }>
+  }) => Promise<{ ok: boolean; message: string; user?: ApiUser }>
   logout: () => void
   becomeSeller: () => Promise<{ ok: boolean; message: string }>
-  updateProfile: (payload: Partial<Pick<ApiUser, 'name' | 'phone'>>) => Promise<void>
+  updateProfile: (
+    payload: Partial<
+      Pick<ApiUser, 'name' | 'phone' | 'avatarUrl' | 'birthday' | 'profileCompleted'>
+    >,
+  ) => Promise<void>
   refreshSession: () => Promise<void>
 
   cart: CartItem[]
@@ -414,7 +424,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setUser(res.user)
       const me = await authApi.me()
       setShop(me.shop)
-      return { ok: true, message: 'เข้าสู่ระบบสำเร็จ' }
+      setUser(me.user)
+      return { ok: true, message: 'เข้าสู่ระบบสำเร็จ', user: me.user }
     } catch (error) {
       return {
         ok: false,
@@ -428,7 +439,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const me = await authApi.me()
     setUser(me.user)
     setShop(me.shop)
-    return { ok: true, message }
+    return { ok: true as const, message, user: me.user }
   }, [])
 
   const requestPhoneOtp = useCallback(async (phone: string) => {
@@ -501,7 +512,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setToken(res.token)
         setUser(res.user)
         setShop(null)
-        return { ok: true, message: 'สมัครสมาชิกสำเร็จ' }
+        return { ok: true, message: 'สมัครสมาชิกสำเร็จ', user: res.user }
       } catch (error) {
         return {
           ok: false,
@@ -533,10 +544,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const updateProfile = useCallback(async (payload: Partial<Pick<ApiUser, 'name' | 'phone'>>) => {
-    const res = await authApi.updateMe(payload)
-    setUser(res.user)
-  }, [])
+  const updateProfile = useCallback(
+    async (
+      payload: Partial<
+        Pick<ApiUser, 'name' | 'phone' | 'avatarUrl' | 'birthday' | 'profileCompleted'>
+      >,
+    ) => {
+      const res = await authApi.updateMe(payload)
+      setUser(res.user)
+    },
+    [],
+  )
 
   const linkGoogle = useCallback(
     async (payload?: { credential?: string; demoEmail?: string; demoName?: string }) => {

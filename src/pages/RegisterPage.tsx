@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/layout/PageHeader'
+import { postLoginPath } from '../lib/profile'
 import { useCatalog } from '../store/CatalogContext'
 import { useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
@@ -46,7 +47,7 @@ export function RegisterPage() {
     })
     setBusy(false)
     toast(result.message)
-    if (result.ok) navigate(asSeller ? '/seller' : '/account', { replace: true })
+    if (result.ok) navigate(postLoginPath(result.user, asSeller ? '/seller' : '/account'), { replace: true })
   }
 
   if (asSeller && user) {

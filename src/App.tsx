@@ -14,6 +14,7 @@ import { ShopPage } from './pages/ShopPage'
 import { LoginPage } from './pages/LoginPage'
 import { LineCallbackPage } from './pages/LineCallbackPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { OnboardingPage } from './pages/OnboardingPage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
@@ -60,6 +61,7 @@ import { SellerMePage } from './pages/seller/SellerMePage'
 import { SellerVouchersPage } from './pages/seller/SellerVouchersPage'
 import { ChatListPage } from './pages/ChatListPage'
 import { ChatThreadPage } from './pages/ChatThreadPage'
+import { needsProfileOnboarding } from './lib/profile'
 import { useStore } from './store/StoreContext'
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -69,155 +71,186 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return children
 }
 
+function ProfileOnboardingGate({ children }: { children: ReactNode }) {
+  const { user, bootstrapping } = useStore()
+  const location = useLocation()
+  const path = location.pathname
+
+  const allowed =
+    path.startsWith('/onboarding') ||
+    path.startsWith('/login') ||
+    path.startsWith('/register') ||
+    path.startsWith('/privacy') ||
+    path.startsWith('/terms') ||
+    path.startsWith('/returns-policy') ||
+    path.startsWith('/admin') ||
+    path.startsWith('/help')
+
+  if (!bootstrapping && needsProfileOnboarding(user) && !allowed) {
+    return (
+      <Navigate
+        to="/onboarding"
+        replace
+        state={{ from: `${location.pathname}${location.search}` }}
+      />
+    )
+  }
+
+  return children
+}
+
 export default function App() {
   return (
-    <Routes>
-      <Route path="admin/login" element={<AdminLoginPage />} />
-      <Route path="admin" element={<AdminShell />}>
-        <Route index element={<AdminDashboardPage />} />
-        <Route path="products" element={<AdminProductsPage />} />
-        <Route path="orders" element={<AdminOrdersPage />} />
-        <Route path="shops" element={<AdminShopsPage />} />
-        <Route path="users" element={<AdminUsersPage />} />
-        <Route path="vouchers" element={<AdminVouchersPage />} />
-        <Route path="wallet" element={<AdminWalletPage />} />
-        <Route path="payments" element={<AdminPaymentsPage />} />
-        <Route path="reports" element={<AdminReportsPage />} />
-        <Route path="returns" element={<AdminReturnsPage />} />
-        <Route path="app-content" element={<AdminAppContentPage />} />
-        <Route path="help" element={<AdminHelpPage />} />
-        <Route path="feed" element={<AdminFeedPage />} />
-        <Route path="banners" element={<AdminBannersPage />} />
-        <Route path="categories" element={<AdminCategoriesPage />} />
-        <Route path="flash" element={<AdminFlashPage />} />
-        <Route path="brand" element={<AdminBrandPage />} />
-      </Route>
+    <ProfileOnboardingGate>
+      <Routes>
+        <Route path="admin/login" element={<AdminLoginPage />} />
+        <Route path="admin" element={<AdminShell />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="products" element={<AdminProductsPage />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="shops" element={<AdminShopsPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="vouchers" element={<AdminVouchersPage />} />
+          <Route path="wallet" element={<AdminWalletPage />} />
+          <Route path="payments" element={<AdminPaymentsPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="returns" element={<AdminReturnsPage />} />
+          <Route path="app-content" element={<AdminAppContentPage />} />
+          <Route path="help" element={<AdminHelpPage />} />
+          <Route path="feed" element={<AdminFeedPage />} />
+          <Route path="banners" element={<AdminBannersPage />} />
+          <Route path="categories" element={<AdminCategoriesPage />} />
+          <Route path="flash" element={<AdminFlashPage />} />
+          <Route path="brand" element={<AdminBrandPage />} />
+        </Route>
 
-      <Route path="seller" element={<SellerShell />}>
-        <Route index element={<SellerDashboardPage />} />
-        <Route path="tools" element={<SellerToolsPage />} />
-        <Route path="me" element={<SellerMePage />} />
-        <Route path="vouchers" element={<SellerVouchersPage />} />
-        <Route path="products" element={<SellerProductsPage />} />
-        <Route path="orders" element={<SellerOrdersPage />} />
-        <Route path="orders/mass-ship" element={<SellerMassShipPage />} />
-        <Route path="returns" element={<SellerReturnsPage />} />
-        <Route path="wallet" element={<SellerWalletPage />} />
-        <Route path="shop" element={<SellerShopPage />} />
-      </Route>
+        <Route path="seller" element={<SellerShell />}>
+          <Route index element={<SellerDashboardPage />} />
+          <Route path="tools" element={<SellerToolsPage />} />
+          <Route path="me" element={<SellerMePage />} />
+          <Route path="vouchers" element={<SellerVouchersPage />} />
+          <Route path="products" element={<SellerProductsPage />} />
+          <Route path="orders" element={<SellerOrdersPage />} />
+          <Route path="orders/mass-ship" element={<SellerMassShipPage />} />
+          <Route path="returns" element={<SellerReturnsPage />} />
+          <Route path="wallet" element={<SellerWalletPage />} />
+          <Route path="shop" element={<SellerShopPage />} />
+        </Route>
 
-      <Route element={<AppShell />}>
-        <Route index element={<HomePage />} />
-        <Route path="mall" element={<MallPage />} />
-        <Route path="live" element={<LivePage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="account" element={<AccountPage />} />
-      </Route>
+        <Route element={<AppShell />}>
+          <Route index element={<HomePage />} />
+          <Route path="mall" element={<MallPage />} />
+          <Route path="live" element={<LivePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="account" element={<AccountPage />} />
+        </Route>
 
-      <Route path="cart" element={<CartPage />} />
-      <Route path="search" element={<SearchPage />} />
-      <Route path="search/visual" element={<VisualSearchPage />} />
-      <Route path="product/:id" element={<ProductPage />} />
-      <Route path="category/:slug" element={<CategoryPage />} />
-      <Route path="shop/:slug" element={<ShopPage />} />
-      <Route path="login" element={<LoginPage />} />
-      <Route path="login/line/callback" element={<LineCallbackPage />} />
-      <Route path="register" element={<RegisterPage />} />
-      <Route path="wishlist" element={<WishlistPage />} />
-      <Route path="vouchers" element={<VouchersPage />} />
-      <Route
-        path="wallet"
-        element={
-          <RequireAuth>
-            <BuyerWalletPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="returns"
-        element={
-          <RequireAuth>
-            <BuyerReturnsPage />
-          </RequireAuth>
-        }
-      />
-      <Route path="help" element={<HelpCenterPage />} />
-      <Route path="privacy" element={<LegalPage kind="privacy" />} />
-      <Route path="terms" element={<LegalPage kind="terms" />} />
-      <Route path="returns-policy" element={<LegalPage kind="returnPolicy" />} />
+        <Route path="cart" element={<CartPage />} />
+        <Route path="search" element={<SearchPage />} />
+        <Route path="search/visual" element={<VisualSearchPage />} />
+        <Route path="product/:id" element={<ProductPage />} />
+        <Route path="category/:slug" element={<CategoryPage />} />
+        <Route path="shop/:slug" element={<ShopPage />} />
+        <Route path="login" element={<LoginPage />} />
+        <Route path="login/line/callback" element={<LineCallbackPage />} />
+        <Route path="register" element={<RegisterPage />} />
+        <Route path="onboarding" element={<OnboardingPage />} />
+        <Route path="wishlist" element={<WishlistPage />} />
+        <Route path="vouchers" element={<VouchersPage />} />
+        <Route
+          path="wallet"
+          element={
+            <RequireAuth>
+              <BuyerWalletPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="returns"
+          element={
+            <RequireAuth>
+              <BuyerReturnsPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="help" element={<HelpCenterPage />} />
+        <Route path="privacy" element={<LegalPage kind="privacy" />} />
+        <Route path="terms" element={<LegalPage kind="terms" />} />
+        <Route path="returns-policy" element={<LegalPage kind="returnPolicy" />} />
 
-      <Route
-        path="checkout"
-        element={
-          <RequireAuth>
-            <CheckoutPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="orders"
-        element={
-          <RequireAuth>
-            <OrdersPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="orders/:id"
-        element={
-          <RequireAuth>
-            <OrderDetailPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="orders/labels"
-        element={
-          <RequireAuth>
-            <BatchShippingLabelsPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="orders/:id/label"
-        element={
-          <RequireAuth>
-            <ShippingLabelPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="chats"
-        element={
-          <RequireAuth>
-            <ChatListPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="chats/:id"
-        element={
-          <RequireAuth>
-            <ChatThreadPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="settings"
-        element={
-          <RequireAuth>
-            <SettingsPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="addresses"
-        element={
-          <RequireAuth>
-            <AddressesPage />
-          </RequireAuth>
-        }
-      />
-    </Routes>
+        <Route
+          path="checkout"
+          element={
+            <RequireAuth>
+              <CheckoutPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="orders"
+          element={
+            <RequireAuth>
+              <OrdersPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="orders/:id"
+          element={
+            <RequireAuth>
+              <OrderDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="orders/labels"
+          element={
+            <RequireAuth>
+              <BatchShippingLabelsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="orders/:id/label"
+          element={
+            <RequireAuth>
+              <ShippingLabelPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="chats"
+          element={
+            <RequireAuth>
+              <ChatListPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="chats/:id"
+          element={
+            <RequireAuth>
+              <ChatThreadPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <RequireAuth>
+              <SettingsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="addresses"
+          element={
+            <RequireAuth>
+              <AddressesPage />
+            </RequireAuth>
+          }
+        />
+      </Routes>
+    </ProfileOnboardingGate>
   )
 }

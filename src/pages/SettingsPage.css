@@ -1,4 +1,9 @@
-.settings-page {
+.settings-card .image-upload__preview {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+}
   padding: 12px;
   background: var(--bg, #f5f5f5);
   min-height: calc(100dvh - var(--header-height));

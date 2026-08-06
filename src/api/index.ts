@@ -87,8 +87,9 @@ export const authApi = {
       '/auth/become-seller',
       { method: 'POST' },
     ),
-  updateMe: (body: Partial<Pick<ApiUser, 'name' | 'phone'>>) =>
-    api<{ ok: true; user: ApiUser }>('/auth/me', { method: 'PATCH', json: body }),
+  updateMe: (
+    body: Partial<Pick<ApiUser, 'name' | 'phone' | 'avatarUrl' | 'birthday' | 'profileCompleted'>>,
+  ) => api<{ ok: true; user: ApiUser }>('/auth/me', { method: 'PATCH', json: body }),
   linkGoogle: (body: { credential?: string; demoEmail?: string; demoName?: string }) =>
     api<{ ok: true; user: ApiUser; message?: string }>('/auth/link/google', {
       method: 'POST',

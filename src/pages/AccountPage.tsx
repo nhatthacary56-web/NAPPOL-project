@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { mediaUrl } from '../api/client'
 import { useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
 import './AccountPage.css'
@@ -69,7 +70,11 @@ export function AccountPage() {
         </div>
         <div className="account-page__hero-main">
           <div className="account-page__avatar" aria-hidden="true">
-            {(user?.name ?? brand.logoText).slice(0, 1).toUpperCase()}
+            {user?.avatarUrl ? (
+              <img src={mediaUrl(user.avatarUrl)} alt="" />
+            ) : (
+              (user?.name ?? brand.logoText).slice(0, 1).toUpperCase()
+            )}
           </div>
           <div className="account-page__identity">
             {user ? (

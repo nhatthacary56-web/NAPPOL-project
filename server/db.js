@@ -812,6 +812,9 @@ export function publicUser(user) {
   const socialAuth = ['google', 'line', 'phone'].includes(user.authProvider)
   return {
     ...rest,
+    avatarUrl: user.avatarUrl || '',
+    birthday: user.birthday || '',
+    profileCompleted: Boolean(user.profileCompleted),
     hasPassword: Boolean(passwordHash) && (user.passwordSet === true || !socialAuth),
     googleLinked: Boolean(googleId),
     lineLinked: Boolean(lineId),

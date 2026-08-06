@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { authApi } from '../api'
+import { ImageUpload } from '../components/ImageUpload'
 import { PageHeader } from '../components/layout/PageHeader'
 import { useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
@@ -45,6 +46,8 @@ export function SettingsPage() {
   } = useStore()
   const { toast } = useToast()
   const [name, setName] = useState(user?.name ?? '')
+  const [birthday, setBirthday] = useState(user?.birthday ?? '')
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? '')
   const [phone, setPhone] = useState(user?.phone ?? '')
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
@@ -59,8 +62,10 @@ export function SettingsPage() {
 
   useEffect(() => {
     setName(user?.name ?? '')
+    setBirthday(user?.birthday ?? '')
+    setAvatarUrl(user?.avatarUrl ?? '')
     setPhone(user?.phone ?? '')
-  }, [user?.name, user?.phone])
+  }, [user?.name, user?.birthday, user?.avatarUrl, user?.phone])
 
   useEffect(() => {
     void authApi
@@ -129,7 +134,12 @@ export function SettingsPage() {
     event.preventDefault()
     setBusy(true)
     try {
-      await updateProfile({ name: name.trim() })
+      await updateProfile({
+        name: name.trim(),
+        birthday: birthday || '',
+        avatarUrl: avatarUrl || '',
+        profileCompleted: true,
+      })
       toast('บันทึกโปรไฟล์แล้ว')
     } catch (error) {
       toast(error instanceof Error ? error.message : 'บันทึกไม่สำเร็จ')
@@ -209,8 +219,21 @@ export function SettingsPage() {
           <h2>โปรไฟล์</h2>
           <form onSubmit={onSaveProfile}>
             <label>
+              รูปโปรไฟล์
+              <ImageUpload value={avatarUrl} onChange={setAvatarUrl} />
+            </label>
+            <label>
               ชื่อที่แสดง
-              <input value={name} onChange={(e) => setName(e.target.value)} required />
+              <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
+            </label>
+            <label>
+              วันเกิด
+              <input
+                type="date"
+                value={birthday}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setBirthday(e.target.value)}
+              />
             </label>
             <label>
               อีเมล

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/layout/PageHeader'
+import { postLoginPath } from '../lib/profile'
 import { useStore } from '../store/StoreContext'
 import { useToast } from '../store/ToastContext'
 import './AuthPages.css'
@@ -40,14 +41,21 @@ export function LineCallbackPage() {
         return
       }
 
-      const result =
-        mode === 'link' ? await linkLine({ code }) : await loginWithLine({ code })
-      toast(result.message)
       sessionStorage.removeItem('line.login.from')
       sessionStorage.removeItem('line.login.state')
       sessionStorage.removeItem('line.login.mode')
-      if (result.ok) navigate(from, { replace: true })
-      else navigate(mode === 'link' ? '/settings' : '/login', { replace: true })
+
+      if (mode === 'link') {
+        const result = await linkLine({ code })
+        toast(result.message)
+        navigate(result.ok ? '/settings' : '/settings', { replace: true })
+        return
+      }
+
+      const result = await loginWithLine({ code })
+      toast(result.message)
+      if (result.ok) navigate(postLoginPath(result.user, from), { replace: true })
+      else navigate('/login', { replace: true })
     }
 
     void run()
